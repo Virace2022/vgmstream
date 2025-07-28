@@ -54,15 +54,15 @@ function(set_ffmpeg onoff useForce)
 endfunction()
 
 # Options
-set_mpeg(ON FALSE)
+set_mpeg(OFF FALSE)
 set_vorbis(ON FALSE)
 set_ffmpeg(ON FALSE)
 
-option(USE_G7221 "Use G7221 for support of ITU-T G.722.1 annex C" ON)
-option(USE_G719 "Use libg719_decode for support ITU-T G.719" ON)
+option(USE_G7221 "Use G7221 for support of ITU-T G.722.1 annex C" OFF)
+option(USE_G719 "Use libg719_decode for support ITU-T G.719" OFF)
 option(USE_ATRAC9 "Use LibAtrac9 for support of ATRAC9" ON)
-option(USE_CELT "Use libcelt for support of FSB CELT versions 0.6.1 and 0.11.0" ON)
-option(USE_SPEEX "Use libspeex for support of SPEEX" ON)
+option(USE_CELT "Use libcelt for support of FSB CELT versions 0.6.1 and 0.11.0" OFF)
+option(USE_SPEEX "Use libspeex for support of SPEEX" OFF)
 
 if(NOT WIN32)
 	set(MPEG_PATH CACHE PATH "Path to mpg123")
@@ -110,7 +110,7 @@ if(EMSCRIPTEN)
 	set(BUILD_AUDACIOUS OFF)
 	set(BUILD_SHARED_LIBS OFF)
 	
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lworkerfs.js -s CASE_INSENSITIVE_FS -s ALLOW_MEMORY_GROWTH")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lworkerfs.js -s CASE_INSENSITIVE_FS -s ALLOW_MEMORY_GROWTH -flto -O3")
 endif()
 
 # Static builds will link all libraries statically
