@@ -56,3 +56,12 @@ install(TARGETS vgmstream_cli
 	RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 # TODO: Make it so vgmstream123 can build with Windows (this probably needs a libao.dll included with vgmstream, though)
+
+set_mpeg(OFF TRUE)
+set_vorbis(ON TRUE)
+set_ffmpeg(OFF TRUE)
+
+set(USE_G7221 OFF FORCE)
+set(USE_G719 OFF FORCE)
+set(USE_CELT OFF FORCE)
+set(USE_SPEEX OFF FORCE)
