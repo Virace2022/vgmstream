@@ -97,124 +97,125 @@ decode_fail:
 /* helper functions to parse new block */
 void block_update(off_t block_offset, VGMSTREAM* vgmstream) {
     switch (vgmstream->layout_type) {
-        case layout_blocked_ast:
-            block_update_ast(block_offset,vgmstream);
-            break;
-        case layout_blocked_mxch:
-            block_update_mxch(block_offset,vgmstream);
-            break;
-        case layout_blocked_halpst:
-            block_update_halpst(block_offset,vgmstream);
-            break;
-        case layout_blocked_xa:
-            block_update_xa(block_offset,vgmstream);
-            break;
-        case layout_blocked_ea_schl:
-            block_update_ea_schl(block_offset,vgmstream);
-            break;
-        case layout_blocked_ea_1snh:
-            block_update_ea_1snh(block_offset,vgmstream);
-            break;
-        case layout_blocked_caf:
-            block_update_caf(block_offset,vgmstream);
-            break;
-        case layout_blocked_wsi:
-            block_update_wsi(block_offset,vgmstream);
-            break;
-        case layout_blocked_str_snds:
-            block_update_str_snds(block_offset,vgmstream);
-            break;
-        case layout_blocked_ws_aud:
-            block_update_ws_aud(block_offset,vgmstream);
-            break;
-        case layout_blocked_dec:
-            block_update_dec(block_offset,vgmstream);
-            break;
-        case layout_blocked_mul:
-            block_update_mul(block_offset,vgmstream);
-            break;
-        case layout_blocked_gsnd:
-            block_update_gsnd(block_offset,vgmstream);
-            break;
-        case layout_blocked_vs_mh:
-            block_update_vs_mh(block_offset,vgmstream);
-            break;
-        case layout_blocked_vas_kceo:
-            block_update_vas_kceo(block_offset,vgmstream);
-            break;
-        case layout_blocked_thp:
-            block_update_thp(block_offset,vgmstream);
-            break;
-        case layout_blocked_filp:
-            block_update_filp(block_offset,vgmstream);
-            break;
-        case layout_blocked_rage_aud:
-            block_update_rage_aud(block_offset,vgmstream);
-            break;
-        case layout_blocked_ea_swvr:
-            block_update_ea_swvr(block_offset,vgmstream);
-            break;
-        case layout_blocked_adm:
-            block_update_adm(block_offset,vgmstream);
-            break;
-        case layout_blocked_ps2_iab:
-            block_update_ps2_iab(block_offset,vgmstream);
-            break;
-        case layout_blocked_vs_str:
-            block_update_vs_str(block_offset,vgmstream);
-            break;
-        case layout_blocked_rws:
-            block_update_rws(block_offset,vgmstream);
-            break;
-        case layout_blocked_hwas:
-            block_update_hwas(block_offset,vgmstream);
-            break;
-        case layout_blocked_ea_sns:
-            block_update_ea_sns(block_offset,vgmstream);
-            break;
+        //case layout_blocked_ast:
+        //    block_update_ast(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_mxch:
+        //    block_update_mxch(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_halpst:
+        //    block_update_halpst(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_xa:
+        //    block_update_xa(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_ea_schl:
+        //    block_update_ea_schl(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_ea_1snh:
+        //    block_update_ea_1snh(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_caf:
+        //    block_update_caf(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_wsi:
+        //    block_update_wsi(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_str_snds:
+        //    block_update_str_snds(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_ws_aud:
+        //    block_update_ws_aud(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_dec:
+        //    block_update_dec(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_mul:
+        //    block_update_mul(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_gsnd:
+        //    block_update_gsnd(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_vs_mh:
+        //    block_update_vs_mh(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_vas_kceo:
+        //    block_update_vas_kceo(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_thp:
+        //    block_update_thp(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_filp:
+        //    block_update_filp(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_rage_aud:
+        //    block_update_rage_aud(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_ea_swvr:
+        //    block_update_ea_swvr(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_adm:
+        //    block_update_adm(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_ps2_iab:
+        //    block_update_ps2_iab(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_vs_str:
+        //    block_update_vs_str(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_rws:
+        //    block_update_rws(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_hwas:
+        //    block_update_hwas(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_ea_sns:
+        //    block_update_ea_sns(block_offset,vgmstream);
+        //    break;
         case layout_blocked_awc:
             block_update_awc(block_offset,vgmstream);
             break;
-        case layout_blocked_vgs:
-            block_update_vgs(block_offset,vgmstream);
-            break;
-        case layout_blocked_xwav:
-            block_update_xwav(block_offset,vgmstream);
-            break;
+        //case layout_blocked_vgs:
+        //    block_update_vgs(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_xwav:
+        //    block_update_xwav(block_offset,vgmstream);
+        //    break;
         case layout_blocked_xvag_subsong:
             block_update_xvag_subsong(block_offset,vgmstream);
             break;
-        case layout_blocked_ea_wve_au00:
-            block_update_ea_wve_au00(block_offset,vgmstream);
-            break;
-        case layout_blocked_ea_wve_ad10:
-            block_update_ea_wve_ad10(block_offset,vgmstream);
-            break;
-        case layout_blocked_sthd:
-            block_update_sthd(block_offset,vgmstream);
-            break;
-        case layout_blocked_h4m:
-            block_update_h4m(block_offset,vgmstream);
-            break;
-        case layout_blocked_xa_aiff:
-            block_update_xa_aiff(block_offset,vgmstream);
-            break;
-        case layout_blocked_vs_square:
-            block_update_vs_square(block_offset,vgmstream);
-            break;
+        //case layout_blocked_ea_wve_au00:
+        //    block_update_ea_wve_au00(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_ea_wve_ad10:
+        //    block_update_ea_wve_ad10(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_sthd:
+        //    block_update_sthd(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_h4m:
+        //    block_update_h4m(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_xa_aiff:
+        //    block_update_xa_aiff(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_vs_square:
+        //    block_update_vs_square(block_offset,vgmstream);
+        //    break;
         case layout_blocked_vid1:
             block_update_vid1(block_offset,vgmstream);
             break;
-        case layout_blocked_ubi_sce:
-            block_update_ubi_sce(block_offset,vgmstream);
-            break;
-        case layout_blocked_tt_ad:
-            block_update_tt_ad(block_offset,vgmstream);
-            break;
-        case layout_blocked_vas:
-            block_update_vas(block_offset,vgmstream);
-            break;
+        //case layout_blocked_ubi_sce:
+        //    block_update_ubi_sce(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_tt_ad:
+        //    block_update_tt_ad(block_offset,vgmstream);
+        //    break;
+        //case layout_blocked_vas:
+        //    block_update_vas(block_offset,vgmstream);
+        //    break;
         default: /* not a blocked layout */
+            vgmstream->next_block_offset = block_offset;
             break;
     }
 }

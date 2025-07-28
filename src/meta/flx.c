@@ -1,36 +1,35 @@
 #include "meta.h"
 #include "../coding/coding.h"
 
-/* .FLX - from Ultima IX (PC) */
-VGMSTREAM* init_vgmstream_flx(STREAMFILE* sf) {
-    VGMSTREAM* vgmstream = NULL;
+/* FLX - from Ultima IX (.FLX is actually an archive format with sometimes sound data, let's support both anyway) */
+VGMSTREAM * init_vgmstream_flx(STREAMFILE *streamFile) {
+    VGMSTREAM * vgmstream = NULL;
     off_t start_offset, stream_offset = 0;
     size_t data_size;
-    int loop_flag, channels, codec;
-    int total_subsongs = 0, target_subsong = sf->stream_index;
+    int loop_flag, channel_count, codec;
+    int total_subsongs = 0, target_subsong = streamFile->stream_index;
     size_t stream_size = 0;
 
 
-    /* checks */
-    /* .flx: name of archive (filenames inside don't have extensions) */
-    if (!check_extensions(sf,"flx,"))
-        return NULL;
+    /* check extensions (.flx: name of archive, files inside don't have extensions) */
+    if (!check_extensions(streamFile,"flx"))
+        goto fail;
 
-    // .FLX an archive format with sometimes sound data, let's support both anyway
-    // all spaces up to 0x50 = archive FLX
-    if (is_id32be(0x00,sf, "    ") && is_id32be(0x40,sf, "    ")) {
-        int entries = read_s32le(0x50,sf);
-        if (read_u32le(0x54,sf) != 0x02)
-            return NULL;
-        if (read_u32le(0x58,sf) != get_streamfile_size(sf))
-            return NULL;
+    /* all spaces up to 0x50 = archive FLX */
+    if (read_32bitBE(0x00,streamFile) == 0x20202020 && read_32bitBE(0x40,streamFile) == 0x20202020) {
+        int i;
+        int entries = read_32bitLE(0x50,streamFile);
+        off_t offset = 0x80;
+
+        if (read_32bitLE(0x54,streamFile) != 0x02
+                || read_32bitLE(0x58,streamFile) != get_streamfile_size(streamFile))
+            goto fail;
 
         if (target_subsong == 0) target_subsong = 1;
 
-        uint32_t offset = 0x80;
-        for (int i = 0; i < entries; i++) {
-            off_t entry_offset  = read_u32le(offset + 0x00, sf);
-            size_t entry_size   = read_u32le(offset + 0x04, sf);
+        for (i = 0; i < entries; i++) {
+            off_t entry_offset = read_32bitLE(offset + 0x00, streamFile);
+            size_t entry_size = read_32bitLE(offset + 0x04, streamFile);
             offset += 0x08;
 
             if (entry_offset != 0x00)
@@ -41,32 +40,27 @@ VGMSTREAM* init_vgmstream_flx(STREAMFILE* sf) {
             }
         }
         if (target_subsong < 0 || target_subsong > total_subsongs || total_subsongs < 1) goto fail;
-        if (stream_offset == 0x00)
-            return NULL;
+        if (stream_offset == 0x00) goto fail;
     }
     else {
         stream_offset = 0x00;
-        stream_size = get_streamfile_size(sf);
+        stream_size = get_streamfile_size(streamFile);
     }
 
-    // file ID, can be a bit higher in sfx packs
-    if (read_u32le(stream_offset + 0x00,sf) >= 0x10000)
-        return NULL;
-    // 04: filename
-    if (read_u32le(stream_offset + 0x30,sf) != 0x10)
-        return NULL;
-    data_size = read_u32le(stream_offset + 0x28,sf);
-    channels = read_s32le(stream_offset + 0x34,sf);
-    codec = read_u32le(stream_offset + 0x38,sf);
-    loop_flag = (channels > 1); /* full seamless repeats in music */
+    if (read_32bitLE(stream_offset + 0x30,streamFile) != 0x10)
+        goto fail;
+    data_size = read_32bitLE(stream_offset + 0x28,streamFile);
+    channel_count = read_32bitLE(stream_offset + 0x34,streamFile);
+    codec = read_32bitLE(stream_offset + 0x38,streamFile);
+    loop_flag = (channel_count > 1); /* full seamless repeats in music */
     start_offset = stream_offset + 0x3c;
     /* 0x00: id */
 
     /* build the VGMSTREAM */
-    vgmstream = allocate_vgmstream(channels, loop_flag);
+    vgmstream = allocate_vgmstream(channel_count,loop_flag);
     if (!vgmstream) goto fail;
 
-    vgmstream->sample_rate = read_32bitLE(stream_offset + 0x2c,sf);
+    vgmstream->sample_rate = read_32bitLE(stream_offset + 0x2c,streamFile);
     vgmstream->num_streams = total_subsongs;
     vgmstream->stream_size = stream_size;
     vgmstream->meta_type = meta_PC_FLX;
@@ -77,14 +71,14 @@ VGMSTREAM* init_vgmstream_flx(STREAMFILE* sf) {
             vgmstream->layout_type = layout_interleave;
             vgmstream->interleave_block_size = 0x02;
 
-            vgmstream->num_samples = pcm_bytes_to_samples(data_size, channels, 16);
+            vgmstream->num_samples = pcm_bytes_to_samples(data_size, channel_count, 16);
             break;
 
         case 0x01:  /* EA-XA (music, sfx) */
-            vgmstream->coding_type = channels > 1 ? coding_EA_XA : coding_EA_XA_int;
+            vgmstream->coding_type = channel_count > 1 ? coding_EA_XA : coding_EA_XA_int;
             vgmstream->layout_type = layout_none;
 
-            vgmstream->num_samples = read_32bitLE(stream_offset + 0x28,sf) / 0x0f*channels * 28; /* ea_xa_bytes_to_samples */
+            vgmstream->num_samples = read_32bitLE(stream_offset + 0x28,streamFile) / 0x0f*channel_count * 28; /* ea_xa_bytes_to_samples */
             vgmstream->loop_start_sample = 0;
             vgmstream->loop_end_sample = vgmstream->num_samples;
             break;
@@ -95,7 +89,7 @@ VGMSTREAM* init_vgmstream_flx(STREAMFILE* sf) {
             vgmstream->codec_data = init_ea_mt(vgmstream->channels, 0);
             if (!vgmstream->codec_data) goto fail;
 
-            vgmstream->num_samples = read_32bitLE(start_offset,sf);
+            vgmstream->num_samples = read_32bitLE(start_offset,streamFile);
             start_offset += 0x04;
             break;
 
@@ -104,11 +98,13 @@ VGMSTREAM* init_vgmstream_flx(STREAMFILE* sf) {
             goto fail;
     }
 
-    read_string(vgmstream->stream_name,0x20+1, stream_offset + 0x04,sf);
+    read_string(vgmstream->stream_name,0x20+1, stream_offset + 0x04,streamFile);
 
 
-    if (!vgmstream_open_stream(vgmstream, sf, start_offset))
+    /* open the file for reading */
+    if ( !vgmstream_open_stream(vgmstream, streamFile, start_offset) )
         goto fail;
+
     return vgmstream;
 
 fail:

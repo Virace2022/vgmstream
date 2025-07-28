@@ -231,25 +231,18 @@ ifeq ($(TARGET_OS),Windows_NT)
   ZIP_FILES += README.md
   ZIP_FILES += doc/USAGE.md
   ZIP_FILES += cli/vgmstream-cli.exe
-  ZIP_FILES += winamp/in_vgmstream.dll
-  ZIP_FILES += xmplay/xmp-vgmstream.dll
   ZIP_FILES += ext_libs/*.dll
-  ZIP_FILES_AO  = cli/vgmstream123.exe
-  ZIP_FILES_AO += $(LIBAO_DLL_PATH)/*.dll
 else
   BIN_FILE = vgmstream-$(VGMSTREAM_VERSION)-bin.zip
   ZIP_FILES  = COPYING
   ZIP_FILES += README.md
   ZIP_FILES += doc/USAGE.md
   ZIP_FILES += cli/vgmstream-cli
-  ZIP_FILES_AO  = cli/vgmstream123
 endif
 
 ###############################################################################
 ### targets
 buildrelease: clean bin
-
-buildrelease-ex: clean bin-ex
 
 buildfullrelease: clean sourceball bin
 
@@ -263,31 +256,17 @@ sourceball:
 #	git archive --format zip --output bin/vgmstream-$(VGMSTREAM_VERSION)-src.zip master
 	rm -rf vgmstream-$(VGMSTREAM_VERSION)
 
-bin: vgmstream-cli winamp xmplay
+bin: vgmstream-cli
 	mkdir -p bin
 	zip -FS -j "bin/$(BIN_FILE)" $(ZIP_FILES)
-
-#separate since vgmstream123 is kinda untested
-bin-ex: vgmstream-cli winamp xmplay vgmstream123
-	mkdir -p bin
-	zip -FS -j "bin/$(BIN_FILE)" $(ZIP_FILES) $(ZIP_FILES_AO)
 
 vgmstream-cli: vgmstream_cli
 
 vgmstream_cli: version
 	$(MAKE) -C cli vgmstream_cli
 
-vgmstream123: version
-	$(MAKE) -C cli vgmstream123
-
 api_example: version
 	$(MAKE) -C cli api_example
-
-winamp: version
-	$(MAKE) -C winamp in_vgmstream
-
-xmplay: version
-	$(MAKE) -C xmplay xmp_vgmstream
 
 version:
 	sh version-make.sh
@@ -296,8 +275,6 @@ clean:
 	$(RMF) vgmstream-*.zip
 	$(MAKE) -C src clean
 	$(MAKE) -C cli clean
-	$(MAKE) -C winamp clean
-	$(MAKE) -C xmplay clean
 	$(MAKE) -C ext_libs clean
 
-.PHONY: clean buildfullrelease buildrelease sourceball bin vgmstream-cli vgmstream_cli vgmstream123 api_example winamp xmplay version
+.PHONY: clean buildfullrelease buildrelease sourceball bin vgmstream-cli vgmstream_cli api_example version

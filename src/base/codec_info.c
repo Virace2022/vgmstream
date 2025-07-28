@@ -32,30 +32,30 @@ extern const codec_info_t relic_decoder;
 
 const codec_info_t* codec_get_info(VGMSTREAM* v) {
     switch(v->coding_type) {
-        case coding_CRI_HCA:
-            return &hca_decoder;
-        case coding_KA1A:
-            return &ka1a_decoder;
-        case coding_UBI_MPEG:
-            return &ubimpeg_decoder;
+        //case coding_CRI_HCA:
+        //    return &hca_decoder;
+        //case coding_KA1A:
+        //    return &ka1a_decoder;
+        //case coding_UBI_MPEG:
+        //    return &ubimpeg_decoder;
 #ifdef VGM_USE_VORBIS
         case coding_OGG_VORBIS:
             return &ogg_vorbis_decoder;
         case coding_VORBIS_custom:
             return &vorbis_custom_decoder;
 #endif
-        case coding_TAC:
-            return &tac_decoder;
-        case coding_COMPRESSWAVE:
-            return &compresswave_decoder;
+        //case coding_TAC:
+        //    return &tac_decoder;
+        //case coding_COMPRESSWAVE:
+        //    return &compresswave_decoder;
 #ifdef VGM_USE_SPEEX
-        case coding_SPEEX:
-            return &speex_decoder;
+        //case coding_SPEEX:
+        //    return &speex_decoder;
 #endif
-        case coding_IMUSE:
-            return &imuse_decoder;
-        case coding_MIO:
-            return &mio_decoder;
+        //case coding_IMUSE:
+        //    return &imuse_decoder;
+        //case coding_MIO:
+        //    return &mio_decoder;
         case coding_PCM32LE:
             return &pcm32_decoder;
         case coding_PCM24LE:
@@ -68,23 +68,23 @@ const codec_info_t* codec_get_info(VGMSTREAM* v) {
             return &ffmpeg_decoder;
 #endif
 #ifdef VGM_USE_ATRAC9
-        case coding_ATRAC9:
-            return &atrac9_decoder;
+        //case coding_ATRAC9:
+        //    return &atrac9_decoder;
 #endif
 #ifdef VGM_USE_CELT
-        case coding_CELT_FSB:
-            return &celt_fsb_decoder;
+        //case coding_CELT_FSB:
+        //    return &celt_fsb_decoder;
 #endif
 #ifdef VGM_USE_MPEG
-        case coding_MPEG_custom:
-        case coding_MPEG_ealayer3:
-        case coding_MPEG_layer1:
-        case coding_MPEG_layer2:
-        case coding_MPEG_layer3:
-            return &mpeg_decoder;
+        //case coding_MPEG_custom:
+        //case coding_MPEG_ealayer3:
+        //case coding_MPEG_layer1:
+        //case coding_MPEG_layer2:
+        //case coding_MPEG_layer3:
+        //    return &mpeg_decoder;
 #endif
-        case coding_RELIC:
-            return &relic_decoder;
+        //case coding_RELIC:
+        //    return &relic_decoder;
         default:
             return NULL;
     }

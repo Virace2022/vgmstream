@@ -56,32 +56,3 @@ install(TARGETS vgmstream_cli
 	RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 # TODO: Make it so vgmstream123 can build with Windows (this probably needs a libao.dll included with vgmstream, though)
-
-if(NOT WIN32 AND BUILD_V123)
-	# vgmstream123
-
-	add_executable(vgmstream123
-		vgmstream123.c wav_utils.c)
-
-	# Link to the vgmstream library as well as libao
-	target_link_libraries(vgmstream123 PUBLIC
-		libvgmstream
-		ao pthread dl)
-
-	setup_target(vgmstream123 TRUE)
-
-	# Add AO include directory
-	target_include_directories(vgmstream123 PRIVATE
-		${LIBAO_INCLUDE})
-
-	# Include the version string
-	target_compile_definitions(vgmstream123 PRIVATE VGMSTREAM_VERSION="${VGMSTREAM_VERSION}")
-	
-	if(CMAKE_CXX_COMPILER_ID MATCHES Clang OR CMAKE_CXX_COMPILER_ID MATCHES GNU)
-		set_target_properties(vgmstream123 PROPERTIES LINK_FLAGS_RELEASE -s)
-	endif()
-	
-	# Install vgmstream123
-	install(TARGETS vgmstream123
-		RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-endif()

@@ -10,8 +10,11 @@
 #ifdef WIN32
 #include <io.h>
 #include <fcntl.h>
+#include <windows.h>
 #else
 #include <unistd.h>
+#include <sys/stat.h>
+#include <dirent.h>
 #endif
 
 #ifndef STDOUT_FILENO
@@ -26,7 +29,8 @@
 #ifndef VGMSTREAM_VERSION
 #define VGMSTREAM_VERSION "unknown version " __DATE__
 #endif
-#define APP_NAME  "vgmstream CLI decoder " VGMSTREAM_VERSION
+#define CUSTOM_BUILD_TAG " (mod by Virace)"
+#define APP_NAME  "vgmstream CLI decoder " VGMSTREAM_VERSION CUSTOM_BUILD_TAG
 #define APP_INFO  APP_NAME " (" __DATE__ ")"
 
 
@@ -86,6 +90,83 @@ static void print_usage(const char* progname, bool is_help) {
 
 }
 
+static bool is_directory(const char* path) {
+#ifdef _WIN32
+    DWORD attrs = GetFileAttributesA(path);
+    return (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY));
+#else
+    struct stat st;
+    if (stat(path, &st) != 0)
+        return false;
+    return S_ISDIR(st.st_mode);
+#endif
+}
+
+static void process_directory(const char* dirpath, char*** files, int* count, int* capacity) {
+    char path[CLI_PATH_LIMIT];
+#ifdef _WIN32
+    WIN32_FIND_DATAA ffd;
+    HANDLE hFind = INVALID_HANDLE_VALUE;
+
+    snprintf(path, sizeof(path), "%s\\*", dirpath);
+    hFind = FindFirstFileA(path, &ffd);
+    if (hFind == INVALID_HANDLE_VALUE)
+        return;
+
+    do {
+        if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            if (strcmp(ffd.cFileName, ".") != 0 && strcmp(ffd.cFileName, "..") != 0) {
+                char sub_path[CLI_PATH_LIMIT];
+                snprintf(sub_path, sizeof(sub_path), "%s\\%s", dirpath, ffd.cFileName);
+                process_directory(sub_path, files, count, capacity);
+            }
+        }
+        else {
+            const char* ext = strrchr(ffd.cFileName, '.');
+            if (ext && strcmp(ext, ".wem") == 0) {
+                if (*count >= *capacity) {
+                    *capacity *= 2;
+                    *files = realloc(*files, *capacity * sizeof(char*));
+                }
+                char file_path[CLI_PATH_LIMIT];
+                snprintf(file_path, sizeof(file_path), "%s\\%s", dirpath, ffd.cFileName);
+                (*files)[*count] = strdup(file_path);
+                (*count)++;
+            }
+        }
+    } while (FindNextFileA(hFind, &ffd) != 0);
+    FindClose(hFind);
+#else
+    DIR *dir;
+    struct dirent *entry;
+
+    dir = opendir(dirpath);
+    if (!dir) return;
+
+    while ((entry = readdir(dir)) != NULL) {
+        snprintf(path, sizeof(path), "%s/%s", dirpath, entry->d_name);
+
+        if (is_directory(path)) {
+            if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+                process_directory(path, files, count, capacity);
+            }
+        }
+        else {
+            const char* ext = strrchr(entry->d_name, '.');
+            if (ext && strcmp(ext, ".wem") == 0) {
+                if (*count >= *capacity) {
+                    *capacity *= 2;
+                    *files = realloc(*files, *capacity * sizeof(char*));
+                }
+                (*files)[*count] = strdup(path);
+                (*count)++;
+            }
+        }
+    }
+    closedir(dir);
+#endif
+}
+
 static bool parse_config(cli_config_t* cfg, int argc, char** argv) {
     int opt;
 
@@ -99,7 +180,7 @@ static bool parse_config(cli_config_t* cfg, int argc, char** argv) {
     optind = 1; /* reset getopt's ugly globals (needed in wasm that may call same main() multiple times) */
 
     /* read config */
-    while ((opt = getopt(argc, argv, "o:l:f:d:ipPcmxeLEFrgb2:s:tTk:K:hOvD:S:B:VIwW:")) != -1) {
+    while ((opt = getopt(argc, argv, "o:l:f:d:ipPcmxeLEFrgb2:s:tTk:K:hOvD:S:B:VIwW:Y")) != -1) {
         switch (opt) {
             case 'o':
                 cfg->outfilename = optarg;
@@ -211,6 +292,9 @@ static bool parse_config(cli_config_t* cfg, int argc, char** argv) {
             case '2':
                 cfg->stereo_track = atoi(optarg) + 1;
                 break;
+            case 'Y':
+                cfg->delete_source = true;
+                break;
 
             case 'h':
                 print_usage(argv[0], true);
@@ -231,24 +315,49 @@ static bool parse_config(cli_config_t* cfg, int argc, char** argv) {
     }
 
     /* filenames go last in POSIX getopt, not so in glibc getopt */ //TODO unify
-    if (optind != argc - 1) {
-
-        /* check there aren't commands after filename */
-        for (int i = optind; i < argc; i++) {
-            if (argv[i][0] == '-') {
-                fprintf(stderr, "input files must go after options\n");
-                goto fail;
-            }
-        }
-    }
-
-    cfg->infilenames = &argv[optind];
-    cfg->infilenames_count = argc - optind;
-    if (cfg->infilenames_count <= 0) {
+    if (optind >= argc) {
         fprintf(stderr, "missing input file\n");
         print_usage(argv[0], 0);
         goto fail;
     }
+
+    /* expand directory inputs */
+    int capacity = 10;
+    int count = 0;
+    char** expanded_files = malloc(capacity * sizeof(char*));
+    if (!expanded_files) goto fail;
+
+    for (int i = optind; i < argc; i++) {
+        if (is_directory(argv[i])) {
+            process_directory(argv[i], &expanded_files, &count, &capacity);
+        } else {
+            if (count >= capacity) {
+                capacity *= 2;
+                expanded_files = realloc(expanded_files, capacity * sizeof(char*));
+            }
+            expanded_files[count] = strdup(argv[i]);
+            count++;
+        }
+    }
+
+    if (count == 0 && (argc - optind > 0)) {
+        fprintf(stderr, "no matching .wem files found in input directories\n");
+        free(expanded_files);
+        goto fail;
+    }
+
+    if (count > 0) {
+        cfg->infilenames = expanded_files;
+        cfg->infilenames_count = count;
+        cfg->expanded_infilenames = expanded_files;
+        cfg->infiles_need_free = true;
+    }
+    else {
+        free(expanded_files);
+        cfg->infilenames = &argv[optind];
+        cfg->infilenames_count = argc - optind;
+    }
+
 
     if (cfg->outfilename && strchr(cfg->outfilename, '?') != NULL) {
         cfg->outfilename_config = cfg->outfilename;
@@ -559,7 +668,7 @@ static bool convert_file(cli_config_t* cfg) {
     write_file(vgmstream, cfg);
 
     /* try again with reset (for testing, simulates a seek to 0 after changing internal state)
-     * (could simulate by seeking to last sample then to 0, too) */
+     * (could be simulated by seeking to last sample then to 0, too) */
     if (cfg->test_reset) {
         char outfilename_reset[CLI_PATH_LIMIT];
         snprintf(outfilename_reset, sizeof(outfilename_reset), "%s.reset.wav", cfg->outfilename);
@@ -572,6 +681,16 @@ static bool convert_file(cli_config_t* cfg) {
     }
 
     libvgmstream_free(vgmstream);
+
+    if (cfg->delete_source) {
+        if (remove(cfg->infilename) == 0) {
+            printf("source file deleted: %s\n", cfg->infilename);
+        }
+        else {
+            fprintf(stderr, "could not delete source file: %s\n", cfg->infilename);
+        }
+    }
+
     return true;
 
 fail:
@@ -648,6 +767,18 @@ int main(int argc, char** argv) {
             //if (!res) goto fail;
             if (res) ok = true;
         }
+    }
+
+    if (cfg.infilenames_count > 0) {
+        printf("\nFinished processing %d file(s).\n", cfg.infilenames_count);
+    }
+
+    /* free memory from expanded filenames */
+    if (cfg.infiles_need_free) {
+        for (int i = 0; i < cfg.infilenames_count; i++) {
+            free(cfg.expanded_infilenames[i]);
+        }
+        free(cfg.expanded_infilenames);
     }
 
     /* ok if at least one succeeds, for programs that check result code */

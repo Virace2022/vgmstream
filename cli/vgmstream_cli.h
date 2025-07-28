@@ -11,6 +11,10 @@ typedef struct {
     int infilenames_count;
     const char* infilename;
 
+    /* internal state for file list expansion */
+    char** expanded_infilenames;
+    bool infiles_need_free;
+
     const char* outfilename_config;
     const char* outfilename;
 
@@ -51,6 +55,7 @@ typedef struct {
     bool decode_only;
     bool test_reset;
     bool validate_extensions;
+    bool delete_source;
     int seek_samples1;
     int seek_samples2;
     int downmix_channels;

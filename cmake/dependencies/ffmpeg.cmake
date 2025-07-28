@@ -61,7 +61,7 @@ if(USE_FFMPEG)
 
 		FetchDependency(FFMPEG
 			DIR ffmpeg
-			GIT_REPOSITORY https://git.ffmpeg.org/ffmpeg.git
+			GIT_REPOSITORY https://github.com/FFmpeg/FFmpeg.git
 			GIT_TAG n7.1.1
 		)
 

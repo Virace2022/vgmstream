@@ -324,35 +324,35 @@ static uint32_t hash_sf(STREAMFILE* sf) {
 /* average bitrate helper to get STREAMFILE for a channel, since some codecs may use their own */
 static STREAMFILE* get_vgmstream_average_bitrate_channel_streamfile(VGMSTREAM* vgmstream, int channel) {
 
-    if (vgmstream->coding_type == coding_NWA) {
-        return nwa_get_streamfile(vgmstream->codec_data);
-    }
+    //if (vgmstream->coding_type == coding_NWA) {
+    //    return nwa_get_streamfile(vgmstream->codec_data);
+    //}
 
-    if (vgmstream->coding_type == coding_ACM) {
-        return acm_get_streamfile(vgmstream->codec_data);
-    }
+    //if (vgmstream->coding_type == coding_ACM) {
+    //    return acm_get_streamfile(vgmstream->codec_data);
+    //}
 
-    if (vgmstream->coding_type == coding_COMPRESSWAVE) {
-        return compresswave_get_streamfile(vgmstream);
-    }
+    //if (vgmstream->coding_type == coding_COMPRESSWAVE) {
+    //    return compresswave_get_streamfile(vgmstream);
+    //}
 
 #ifdef VGM_USE_VORBIS
     if (vgmstream->coding_type == coding_OGG_VORBIS) {
         return ogg_vorbis_get_streamfile(vgmstream->codec_data);
     }
 #endif
-    if (vgmstream->coding_type == coding_CRI_HCA) {
-        return hca_get_streamfile(vgmstream->codec_data);
-    }
+    //if (vgmstream->coding_type == coding_CRI_HCA) {
+    //    return hca_get_streamfile(vgmstream->codec_data);
+    //}
 #ifdef VGM_USE_FFMPEG
     if (vgmstream->coding_type == coding_FFmpeg) {
         return ffmpeg_get_streamfile(vgmstream->codec_data);
     }
 #endif
 #if defined(VGM_USE_MP4V2) && defined(VGM_USE_FDKAAC)
-    if (vgmstream->coding_type == coding_MP4_AAC) {
-        return mp4_aac_get_streamfile(vgmstream->codec_data);
-    }
+    //if (vgmstream->coding_type == coding_MP4_AAC) {
+    //    return mp4_aac_get_streamfile(vgmstream->codec_data);
+    //}
 #endif
 
     return vgmstream->ch[channel].streamfile;

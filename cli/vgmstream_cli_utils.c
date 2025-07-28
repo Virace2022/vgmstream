@@ -21,6 +21,8 @@ static void clean_filename(char* dst, int clean_paths) {
 void replace_filename(char* dst, size_t dstsize, cli_config_t* cfg, libvgmstream_t* vgmstream) {
     int subsong;
     char stream_name[CLI_PATH_LIMIT];
+    char basename[CLI_PATH_LIMIT];
+    char path[CLI_PATH_LIMIT];
     char buf[CLI_PATH_LIMIT];
     char tmp[CLI_PATH_LIMIT];
 
@@ -63,6 +65,49 @@ void replace_filename(char* dst, size_t dstsize, cli_config_t* cfg, libvgmstream
             pos[0] = '%';
             pos[1] = 's'; /* use %s */
             snprintf(tmp, sizeof(tmp), buf, cfg->infilename);
+        }
+        else if (pos[1] == 'b') {
+            const char *p_start, *p_end;
+
+            /* get basename: filename without extension */
+            p_start = strrchr(cfg->infilename, '/');
+            if (!p_start) p_start = strrchr(cfg->infilename, '\\');
+            if (p_start) p_start += 1;
+            else p_start = cfg->infilename;
+
+            /* copy filename only */
+            strncpy(basename, p_start, sizeof(basename));
+            basename[sizeof(basename)-1] = '\0';
+
+            /* remove extension */
+            p_end = strrchr(basename, '.');
+            if (p_end != NULL && p_end != basename) {
+                basename[p_end - basename] = '\0';
+            }
+
+            pos[0] = '%';
+            pos[1] = 's'; /* use %s */
+            snprintf(tmp, sizeof(tmp), buf, basename);
+        }
+        else if (pos[1] == 'p') {
+            const char *p_end;
+
+            /* get path */
+            p_end = strrchr(cfg->infilename, '/');
+            if (!p_end) p_end = strrchr(cfg->infilename, '\\');
+
+            if (p_end) {
+                /* copy path including separator */
+                strncpy(path, cfg->infilename, p_end - cfg->infilename + 1);
+                path[p_end - cfg->infilename + 1] = '\0';
+            } else {
+                /* no path component */
+                path[0] = '\0';
+            }
+
+            pos[0] = '%';
+            pos[1] = 's'; /* use %s */
+            snprintf(tmp, sizeof(tmp), buf, path);
         }
         else if (pos[1] == 's') {
             pos[0] = '%';
