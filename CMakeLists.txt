@@ -54,9 +54,9 @@ function(set_ffmpeg onoff useForce)
 endfunction()
 
 # Options
-set_mpeg(OFF FALSE)
-set_vorbis(ON FALSE)
-set_ffmpeg(ON FALSE)
+set_mpeg(OFF FORCE)
+set_vorbis(ON FORCE)
+set_ffmpeg(OFF FORCE)
 
 option(USE_G7221 "Use G7221 for support of ITU-T G.722.1 annex C" OFF)
 option(USE_G719 "Use libg719_decode for support ITU-T G.719" OFF)
@@ -111,6 +111,14 @@ if(EMSCRIPTEN)
 	set(BUILD_SHARED_LIBS OFF)
 	
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lworkerfs.js -s CASE_INSENSITIVE_FS -s ALLOW_MEMORY_GROWTH -flto -O3")
+	set_mpeg(OFF FORCE)
+	set_vorbis(ON FORCE)
+	set_ffmpeg(OFF FORCE)
+	set(USE_G7221 OFF FORCE)
+	set(USE_G719 OFF FORCE)
+	set(USE_ATRAC9 OFF FORCE)
+	set(USE_CELT OFF FORCE)
+	set(USE_SPEEX OFF FORCE)
 endif()
 
 # Static builds will link all libraries statically
