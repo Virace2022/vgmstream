@@ -8,6 +8,7 @@ $VsShell = "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7
 $VsInstance = "9d4658d4"
 $WslRepoRoot = "/mnt/" + $RepoRoot.Substring(0,1).ToLowerInvariant() + $RepoRoot.Substring(2).Replace('\', '/')
 $WslBuildRoot = "/mnt/" + $WslBuildDir.Substring(0,1).ToLowerInvariant() + $WslBuildDir.Substring(2).Replace('\', '/')
+$WslFetchRoot = "$WslRepoRoot/.temp/fetchcontent"
 
 function Invoke-VsCommand {
     param(
@@ -57,7 +58,7 @@ if (-not (Test-Path $Exe)) {
     throw "Expected smoke executable was not created: $Exe"
 }
 
-Invoke-WslCommand "source /root/projects/emsdk/emsdk_env.sh >/dev/null 2>&1 && emcmake cmake -S '$WslRepoRoot' -B '$WslBuildRoot' -G 'Unix Makefiles' -DBUILD_WASM_MIN=ON -DBUILD_CLI=OFF -DBUILD_AUDACIOUS=OFF -DBUILD_V123=OFF && cmake --build '$WslBuildRoot' --target vgmstream_wasm_min"
+Invoke-WslCommand "cd '$WslRepoRoot' && FETCHCONTENT_BASE_DIR='$WslFetchRoot' FETCHCONTENT_UPDATES_DISCONNECTED=ON BUILD_DIR='$WslBuildRoot' bash ./make-build-wasm-min.sh"
 
 $WasmJs = Join-Path $WslBuildDir "cli/vgmstream_wasm_min.js"
 $WasmBin = Join-Path $WslBuildDir "cli/vgmstream_wasm_min.wasm"

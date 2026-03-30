@@ -19,7 +19,8 @@ file(GLOB MAIN_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 
 set(WASM_MIN_PRIVATE_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_wasm_min.c
-	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_init_wasm_min.c)
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_init_wasm_min.c
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_wasm_min_runtime.c)
 list(REMOVE_ITEM MAIN_SOURCES ${WASM_MIN_PRIVATE_SOURCES})
 
 # Setup source groups, mainly for Visual Studio
@@ -81,9 +82,11 @@ target_include_directories(libvgmstream PRIVATE ${libvgmstream_includes})
 
 set(libvgmstream_wasm_min_main_sources
 	${MAIN_SOURCES}
-	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_init_wasm_min.c)
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_init_wasm_min.c
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_wasm_min_runtime.c)
 list(REMOVE_ITEM libvgmstream_wasm_min_main_sources
-	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_init.c)
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_init.c
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream.c)
 
 set(libvgmstream_wasm_min_base_sources
 	${BASE_SOURCES}
@@ -93,21 +96,53 @@ list(REMOVE_ITEM libvgmstream_wasm_min_base_sources
 	${CMAKE_CURRENT_SOURCE_DIR}/base/api_decode_open.c
 	${CMAKE_CURRENT_SOURCE_DIR}/base/api_decode_play.c
 	${CMAKE_CURRENT_SOURCE_DIR}/base/api_helpers.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/api_libsf.c
 	${CMAKE_CURRENT_SOURCE_DIR}/base/api_libsf_cache.c
 	${CMAKE_CURRENT_SOURCE_DIR}/base/api_tags.c
-	${CMAKE_CURRENT_SOURCE_DIR}/base/codec_info.c)
+	${CMAKE_CURRENT_SOURCE_DIR}/base/codec_info.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/decode.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/info.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/mixer.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/mixer_ops_common.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/mixer_ops_fade.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/mixing.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/mixing_commands.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/mixing_macros.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/play_config.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/play_state.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/plugins.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/render.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/resampler.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/seek.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/tags.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/streamfile_stdio.c)
 
 set(libvgmstream_wasm_min_meta_sources
 	${CMAKE_CURRENT_SOURCE_DIR}/meta/wwise.c)
+
+set(libvgmstream_wasm_min_layout_sources)
+
+set(libvgmstream_wasm_min_util_sources
+	${UTIL_SOURCES})
+list(REMOVE_ITEM libvgmstream_wasm_min_util_sources
+	${CMAKE_CURRENT_SOURCE_DIR}/util/layout_utils.c)
+
+set(libvgmstream_wasm_min_root_sources
+	${libvgmstream_wasm_min_main_sources}
+	${CMAKE_CURRENT_SOURCE_DIR}/streamfile.c
+	${CMAKE_CURRENT_SOURCE_DIR}/util.c
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_wasm_min_runtime.c)
+list(REMOVE_ITEM libvgmstream_wasm_min_root_sources
+	${CMAKE_CURRENT_SOURCE_DIR}/formats.c)
 
 set(libvgmstream_wasm_min_sources
 	${libvgmstream_wasm_min_base_sources}
 	${CODING_SOURCES}
 	${CLIBS_SOURCES}
-	${LAYOUT_SOURCES}
+	${libvgmstream_wasm_min_layout_sources}
 	${libvgmstream_wasm_min_meta_sources}
-	${UTIL_SOURCES}
-	${libvgmstream_wasm_min_main_sources}
+	${libvgmstream_wasm_min_util_sources}
+	${libvgmstream_wasm_min_root_sources}
 	${EXT_HEADERS}
 )
 

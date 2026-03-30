@@ -10,6 +10,7 @@
 #include "base/decode_state.h"
 #include "base/sbuf.h"
 #include "coding/vorbis_custom_decoder.h"
+#include "vgmstream_wasm_min_runtime.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -278,7 +279,7 @@ int vgmstream_web_convert(
         goto fail;
     }
 
-    vgmstream = init_vgmstream_from_STREAMFILE(api_sf);
+    vgmstream = init_vgmstream_wwise(api_sf);
     close_streamfile(api_sf);
     api_sf = NULL;
     libstreamfile_close(libsf);
@@ -337,7 +338,7 @@ int vgmstream_web_convert(
     result->info_json = info_json;
 
     free(pcm_data);
-    close_vgmstream(vgmstream);
+    close_vgmstream_wasm_min(vgmstream);
     return 0;
 fail:
     free(pcm_data);
@@ -348,7 +349,7 @@ fail:
     if (api_sf)
         close_streamfile(api_sf);
     if (vgmstream)
-        close_vgmstream(vgmstream);
+        close_vgmstream_wasm_min(vgmstream);
     return err;
 }
 

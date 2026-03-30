@@ -4,6 +4,9 @@
 #include "../util/endianness.h"
 #include "../util/channel_mappings.h"
 #include "../base/seek_table.h"
+#ifdef VGM_WASM_MIN
+#include "../vgmstream_wasm_min_runtime.h"
+#endif
 
 
 /* Wwise uses a custom RIFF/RIFX header, non-standard enough that it's parsed it here.
@@ -104,7 +107,11 @@ VGMSTREAM* init_vgmstream_wwise_bnk(STREAMFILE* sf, int* p_prefetch) {
     start_offset = ww.data_offset;
 
     /* build the VGMSTREAM */
+#ifdef VGM_WASM_MIN
+    vgmstream = allocate_vgmstream_wasm_min(ww.channels, ww.loop_flag);
+#else
     vgmstream = allocate_vgmstream(ww.channels, ww.loop_flag);
+#endif
     if (!vgmstream) goto fail;
 
     vgmstream->meta_type = meta_WWISE_RIFF;
@@ -691,13 +698,20 @@ VGMSTREAM* init_vgmstream_wwise_bnk(STREAMFILE* sf, int* p_prefetch) {
             goto fail;
     }
 
-
+#ifdef VGM_WASM_MIN
+    if (!vgmstream_open_stream_wasm_min(vgmstream, sf, start_offset) )
+#else
     if (!vgmstream_open_stream(vgmstream, sf, start_offset) )
+#endif
         goto fail;
     return vgmstream;
 
 fail:
+#ifdef VGM_WASM_MIN
+    close_vgmstream_wasm_min(vgmstream);
+#else
     close_vgmstream(vgmstream);
+#endif
     return NULL;
 }
 
