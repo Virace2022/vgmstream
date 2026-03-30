@@ -1,0 +1,68 @@
+name: wasm-min manual build
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  EM_VERSION: 3.1.74
+
+jobs:
+  build:
+    name: Build wasm-min
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup emsdk
+        uses: pyodide/setup-emsdk@v15
+        with:
+          version: ${{ env.EM_VERSION }}
+
+      - name: Build wasm-min
+        shell: bash
+        run: |
+          BUILD_DIR="$GITHUB_WORKSPACE/.temp/build-wasm-min-gh" \
+          FETCHCONTENT_UPDATES_DISCONNECTED=OFF \
+          JOBS=3 \
+          bash ./make-build-wasm-min.sh
+
+      - name: Compress wasm
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/.temp/build-wasm-min-gh/cli"
+          gzip -c vgmstream_wasm_min.wasm > vgmstream_wasm_min.wasm.gz
+
+      - name: Publish size summary
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/.temp/build-wasm-min-gh/cli"
+          js_size=$(stat -c%s vgmstream_wasm_min.js)
+          wasm_size=$(stat -c%s vgmstream_wasm_min.wasm)
+          gzip_size=$(stat -c%s vgmstream_wasm_min.wasm.gz)
+          {
+            echo "## wasm-min build"
+            echo ""
+            echo "| Artifact | Size (bytes) |"
+            echo "| --- | ---: |"
+            echo "| vgmstream_wasm_min.js | $js_size |"
+            echo "| vgmstream_wasm_min.wasm | $wasm_size |"
+            echo "| vgmstream_wasm_min.wasm.gz | $gzip_size |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload wasm-min artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vgmstream-wasm-min
+          if-no-files-found: error
+          path: |
+            ${{ github.workspace }}/.temp/build-wasm-min-gh/cli/vgmstream_wasm_min.js
+            ${{ github.workspace }}/.temp/build-wasm-min-gh/cli/vgmstream_wasm_min.wasm
+            ${{ github.workspace }}/.temp/build-wasm-min-gh/cli/vgmstream_wasm_min.wasm.gz
