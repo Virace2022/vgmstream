@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${BUILD_DIR:-$REPO_ROOT/.temp/build-wasm-min-wsl}"
-EMSDK_ENV="${EMSDK_ENV:-/root/projects/emsdk/emsdk_env.sh}"
+EMSDK_ENV="${EMSDK_ENV:-}"
 GENERATOR="${GENERATOR:-Unix Makefiles}"
 TARGET="${TARGET:-vgmstream_wasm_min}"
 JOBS="${JOBS:-}"
@@ -14,20 +14,26 @@ VORBIS_PATH_DEFAULT="$REPO_ROOT/dependencies/vorbis"
 OGG_PATH_ARG=()
 VORBIS_PATH_ARG=()
 
-if [[ ! -f "$EMSDK_ENV" ]]; then
-    echo "emsdk env script not found: $EMSDK_ENV" >&2
-    exit 1
-fi
-
-if [[ -d "$OGG_PATH_DEFAULT" ]]; then
+if [[ -f "$OGG_PATH_DEFAULT/CMakeLists.txt" ]]; then
     OGG_PATH_ARG=(-DOGG_PATH="$OGG_PATH_DEFAULT")
 fi
 
-if [[ -d "$VORBIS_PATH_DEFAULT" ]]; then
+if [[ -f "$VORBIS_PATH_DEFAULT/CMakeLists.txt" ]]; then
     VORBIS_PATH_ARG=(-DVORBIS_PATH="$VORBIS_PATH_DEFAULT")
 fi
 
-source "$EMSDK_ENV" >/dev/null 2>&1
+if ! command -v emcmake >/dev/null 2>&1; then
+    if [[ -z "$EMSDK_ENV" ]]; then
+        EMSDK_ENV="/root/projects/emsdk/emsdk_env.sh"
+    fi
+
+    if [[ ! -f "$EMSDK_ENV" ]]; then
+        echo "emcmake not found in PATH and emsdk env script not found: $EMSDK_ENV" >&2
+        exit 1
+    fi
+
+    source "$EMSDK_ENV" >/dev/null 2>&1
+fi
 
 cmake -E make_directory "$BUILD_DIR"
 cmake -E make_directory "$FETCHCONTENT_BASE_DIR"

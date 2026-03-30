@@ -26,6 +26,28 @@ jobs:
         with:
           version: ${{ env.EM_VERSION }}
 
+      - name: Cache ogg
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/dependencies/ogg
+          key: wasm-min-ogg-${{ hashFiles('cmake/dependencies/ogg.cmake') }}
+
+      - name: Cache vorbis
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/dependencies/vorbis
+          key: wasm-min-vorbis-${{ hashFiles('cmake/dependencies/vorbis.cmake') }}
+
+      - name: Verify emsdk environment
+        shell: bash
+        run: |
+          which emcmake
+          emcmake --version
+          which emcc
+          emcc --version
+
       - name: Build wasm-min
         shell: bash
         run: |
