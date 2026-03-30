@@ -85,11 +85,23 @@ set(libvgmstream_wasm_min_main_sources
 list(REMOVE_ITEM libvgmstream_wasm_min_main_sources
 	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_init.c)
 
+set(libvgmstream_wasm_min_base_sources
+	${BASE_SOURCES}
+	${CMAKE_CURRENT_SOURCE_DIR}/base/codec_info_wasm_min.c)
+list(REMOVE_ITEM libvgmstream_wasm_min_base_sources
+	${CMAKE_CURRENT_SOURCE_DIR}/base/api_decode_base.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/api_decode_open.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/api_decode_play.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/api_helpers.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/api_libsf_cache.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/api_tags.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/codec_info.c)
+
 set(libvgmstream_wasm_min_meta_sources
 	${CMAKE_CURRENT_SOURCE_DIR}/meta/wwise.c)
 
 set(libvgmstream_wasm_min_sources
-	${BASE_SOURCES}
+	${libvgmstream_wasm_min_base_sources}
 	${CODING_SOURCES}
 	${CLIBS_SOURCES}
 	${LAYOUT_SOURCES}

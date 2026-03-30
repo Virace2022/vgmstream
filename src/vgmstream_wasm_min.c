@@ -3,7 +3,13 @@
 #include "../cli/wav_utils.h"
 #include "../cli/vjson.h"
 #include "../version.h"
-#include "libvgmstream.h"
+#include "vgmstream.h"
+#include "vgmstream_init.h"
+#include "base/api_internal.h"
+#include "base/codec_info.h"
+#include "base/decode_state.h"
+#include "base/sbuf.h"
+#include "coding/vorbis_custom_decoder.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -12,6 +18,8 @@
 #ifndef VGMSTREAM_VERSION
 #define VGMSTREAM_VERSION "unknown version " __DATE__
 #endif
+
+extern const codec_info_t vorbis_custom_decoder;
 
 typedef struct {
     const uint8_t* data;
@@ -122,7 +130,7 @@ fail:
     return NULL;
 }
 
-static char* wasm_min_build_info_json(libvgmstream_t* lib) {
+static char* wasm_min_build_info_json(VGMSTREAM* vgmstream) {
     char* buf = calloc(1, 0x1000);
     if (!buf)
         return NULL;
@@ -132,50 +140,105 @@ static char* wasm_min_build_info_json(libvgmstream_t* lib) {
 
     vjson_obj_open(&j);
         vjson_keystr(&j, "version", VGMSTREAM_VERSION);
-        vjson_keyint(&j, "sampleRate", lib->format->sample_rate);
-        vjson_keyint(&j, "channels", lib->format->channels);
+        vjson_keyint(&j, "sampleRate", vgmstream->sample_rate);
+        vjson_keyint(&j, "channels", vgmstream->channels);
 
         vjson_key(&j, "mixingInfo");
-        if (lib->format->input_channels > 0) {
-            vjson_obj_open(&j);
-                vjson_keyint(&j, "inputChannels", lib->format->input_channels);
-                vjson_keyint(&j, "outputChannels", lib->format->channels);
-            vjson_obj_close(&j);
-        }
-        else {
-            vjson_null(&j);
-        }
+        vjson_null(&j);
 
-        vjson_keyintnull(&j, "channelLayout", lib->format->channel_layout);
+        vjson_keyintnull(&j, "channelLayout", vgmstream->channel_layout);
 
         vjson_key(&j, "loopingInfo");
-        if (lib->format->loop_end > lib->format->loop_start) {
+        if (vgmstream->loop_end_sample > vgmstream->loop_start_sample) {
             vjson_obj_open(&j);
-                vjson_keyint(&j, "start", lib->format->loop_start);
-                vjson_keyint(&j, "end", lib->format->loop_end);
+                vjson_keyint(&j, "start", vgmstream->loop_start_sample);
+                vjson_keyint(&j, "end", vgmstream->loop_end_sample);
             vjson_obj_close(&j);
         }
         else {
             vjson_null(&j);
         }
 
-        vjson_keyint(&j, "numberOfSamples", lib->format->stream_samples);
-        vjson_keystr(&j, "encoding", lib->format->codec_name);
-        vjson_keystr(&j, "layout", lib->format->layout_name);
-        vjson_keystr(&j, "metadataSource", lib->format->meta_name);
-        vjson_keyint(&j, "bitrate", lib->format->stream_bitrate);
+        vjson_keyint(&j, "numberOfSamples", vgmstream->num_samples);
+        vjson_keystr(&j, "encoding", "Custom Vorbis");
+        vjson_keystr(&j, "layout", "flat");
+        vjson_keystr(&j, "metadataSource", "Audiokinetic Wwise");
+        vjson_keyint(&j, "bitrate", 0);
 
         vjson_key(&j, "streamInfo");
         vjson_obj_open(&j);
-            vjson_keyint(&j, "index", lib->format->subsong_index);
-            vjson_keystr(&j, "name", lib->format->stream_name);
-            vjson_keyint(&j, "total", lib->format->subsong_count);
+            vjson_keyint(&j, "index", vgmstream->stream_index);
+            vjson_keystr(&j, "name", vgmstream->stream_name);
+            vjson_keyint(&j, "total", vgmstream->num_streams);
         vjson_obj_close(&j);
 
-        vjson_keyint(&j, "playSamples", lib->format->play_samples);
+        vjson_keyint(&j, "playSamples", vgmstream->num_samples);
     vjson_obj_close(&j);
 
     return buf;
+}
+
+static int wasm_min_decode_wwise_vorbis(VGMSTREAM* vgmstream, uint8_t** pcm_data, size_t* pcm_size, int32_t* pcm_samples) {
+    decode_state_t* decode_state = vgmstream ? vgmstream->decode_state : NULL;
+    if (!vgmstream || !decode_state || vgmstream->coding_type != coding_VORBIS_custom)
+        return -1;
+
+    const codec_info_t* codec_info = &vorbis_custom_decoder;
+    if (!codec_info->decode_frame)
+        return -1;
+
+    int channels = vgmstream->channels;
+    int32_t target_samples = vgmstream->num_samples;
+    int16_t* pcm = calloc((size_t)target_samples * channels, sizeof(int16_t));
+    if (!pcm)
+        return -1;
+
+    memset(decode_state, 0, sizeof(*decode_state));
+
+    sbuf_t dst;
+    sbuf_init_s16(&dst, pcm, target_samples, channels);
+
+    int empty_reads = 0;
+    while (dst.filled < dst.samples) {
+        if (decode_state->sbuf.filled == 0) {
+            bool ok = codec_info->decode_frame(vgmstream);
+            if (!ok) {
+                free(pcm);
+                return -1;
+            }
+        }
+
+        if (decode_state->discard > 0) {
+            int samples_discard = decode_state->discard;
+            if (samples_discard > decode_state->sbuf.filled)
+                samples_discard = decode_state->sbuf.filled;
+            sbuf_consume(&decode_state->sbuf, samples_discard);
+            decode_state->discard -= samples_discard;
+            continue;
+        }
+
+        if (decode_state->sbuf.filled == 0) {
+            empty_reads++;
+            if (empty_reads > 32) {
+                free(pcm);
+                return -1;
+            }
+            continue;
+        }
+        empty_reads = 0;
+
+        int samples_copy = sbuf_get_copy_max(&dst, &decode_state->sbuf);
+        if (samples_copy <= 0)
+            break;
+
+        sbuf_copy_segments(&dst, &decode_state->sbuf, samples_copy);
+        sbuf_consume(&decode_state->sbuf, samples_copy);
+    }
+
+    *pcm_data = (uint8_t*)pcm;
+    *pcm_size = (size_t)dst.filled * channels * sizeof(int16_t);
+    *pcm_samples = dst.filled;
+    return 0;
 }
 
 int vgmstream_web_convert(
@@ -196,101 +259,62 @@ int vgmstream_web_convert(
         return wasm_min_set_error(result, -2, "only WAV output is supported");
 
     libstreamfile_t* libsf = NULL;
-    libvgmstream_t* lib = NULL;
+    STREAMFILE* api_sf = NULL;
+    VGMSTREAM* vgmstream = NULL;
     uint8_t* pcm_data = NULL;
     uint8_t* wav_data = NULL;
-    void* decode_buf = NULL;
     char* info_json = NULL;
-    size_t pcm_capacity = 0;
     size_t pcm_size = 0;
-    int64_t total_samples = 0;
+    int32_t total_samples = 0;
     int err = -1;
 
     libsf = wasm_min_streamfile_open_internal(input_data, input_size, input_name);
     if (!libsf)
         return wasm_min_set_error(result, -3, "failed to create in-memory streamfile");
 
-    lib = libvgmstream_init();
-    if (!lib) {
-        err = wasm_min_set_error(result, -4, "failed to initialize libvgmstream");
+    api_sf = open_api_streamfile(libsf);
+    if (!api_sf) {
+        err = wasm_min_set_error(result, -4, "failed to create API streamfile");
         goto fail;
     }
 
-    libvgmstream_config_t cfg = {0};
-    cfg.disable_config_override = true;
-    cfg.ignore_loop = options ? options->ignore_loop : false;
-    cfg.force_sfmt = LIBVGMSTREAM_SFMT_PCM16;
-    libvgmstream_setup(lib, &cfg);
-
-    err = libvgmstream_open_stream(lib, libsf, 0);
+    vgmstream = init_vgmstream_from_STREAMFILE(api_sf);
+    close_streamfile(api_sf);
+    api_sf = NULL;
     libstreamfile_close(libsf);
     libsf = NULL;
-    if (err < 0) {
+    if (!vgmstream) {
         err = wasm_min_set_error(result, -5, "input is not a supported Wwise stream");
         goto fail;
     }
 
-    int sample_size = lib->format->sample_size;
-    int channels = lib->format->channels;
-    int decode_samples = 4096;
-    size_t decode_bytes = (size_t)decode_samples * sample_size * channels;
-    decode_buf = malloc(decode_bytes);
-    if (!decode_buf) {
-        err = wasm_min_set_error(result, -6, "failed to allocate decode buffer");
+    if (options && options->ignore_loop) {
+        vgmstream->loop_flag = false;
+    }
+
+    err = wasm_min_decode_wwise_vorbis(vgmstream, &pcm_data, &pcm_size, &total_samples);
+    if (err < 0) {
+        err = wasm_min_set_error(result, -6, "failed to decode Wwise Vorbis stream");
         goto fail;
     }
 
-    while (!lib->decoder->done) {
-        err = libvgmstream_fill(lib, decode_buf, decode_samples);
-        if (err < 0) {
-            err = wasm_min_set_error(result, -7, "decode failed");
-            goto fail;
-        }
-
-        int buf_samples = lib->decoder->buf_samples;
-        int buf_bytes = lib->decoder->buf_bytes;
-        if (buf_samples <= 0 || buf_bytes <= 0)
-            continue;
-
-        size_t needed = pcm_size + (size_t)buf_bytes;
-        if (needed > pcm_capacity) {
-            size_t new_capacity = pcm_capacity ? pcm_capacity * 2 : decode_bytes * 2;
-            while (new_capacity < needed) {
-                new_capacity *= 2;
-            }
-
-            uint8_t* new_pcm = realloc(pcm_data, new_capacity);
-            if (!new_pcm) {
-                err = wasm_min_set_error(result, -8, "failed to grow PCM buffer");
-                goto fail;
-            }
-            pcm_data = new_pcm;
-            pcm_capacity = new_capacity;
-        }
-
-        wav_swap_samples_le(lib->decoder->buf, channels * buf_samples, sample_size);
-        memcpy(pcm_data + pcm_size, lib->decoder->buf, buf_bytes);
-        pcm_size += (size_t)buf_bytes;
-        total_samples += buf_samples;
-    }
-
     wav_header_t wav = {
-        .sample_count = (int32_t)total_samples,
-        .sample_rate = lib->format->sample_rate,
-        .channels = channels,
-        .sample_size = sample_size,
-        .is_float = lib->format->sample_format == LIBVGMSTREAM_SFMT_FLOAT,
+        .sample_count = total_samples,
+        .sample_rate = vgmstream->sample_rate,
+        .channels = vgmstream->channels,
+        .sample_size = sizeof(int16_t),
+        .is_float = false,
     };
     uint8_t wav_header[0x100];
     size_t wav_header_size = wav_make_header(wav_header, sizeof(wav_header), &wav);
     if (wav_header_size == 0) {
-        err = wasm_min_set_error(result, -9, "failed to build WAV header");
+        err = wasm_min_set_error(result, -7, "failed to build WAV header");
         goto fail;
     }
 
     wav_data = malloc(wav_header_size + pcm_size);
     if (!wav_data) {
-        err = wasm_min_set_error(result, -10, "failed to allocate WAV output");
+        err = wasm_min_set_error(result, -8, "failed to allocate WAV output");
         goto fail;
     }
 
@@ -298,9 +322,9 @@ int vgmstream_web_convert(
     memcpy(wav_data + wav_header_size, pcm_data, pcm_size);
 
     if (!options || options->want_info_json) {
-        info_json = wasm_min_build_info_json(lib);
+        info_json = wasm_min_build_info_json(vgmstream);
         if (!info_json) {
-            err = wasm_min_set_error(result, -11, "failed to build info json");
+            err = wasm_min_set_error(result, -9, "failed to build info json");
             goto fail;
         }
     }
@@ -312,19 +336,19 @@ int vgmstream_web_convert(
     result->audio_size = wav_header_size + pcm_size;
     result->info_json = info_json;
 
-    free(decode_buf);
     free(pcm_data);
-    libvgmstream_free(lib);
+    close_vgmstream(vgmstream);
     return 0;
 fail:
-    free(decode_buf);
     free(pcm_data);
     free(wav_data);
     free(info_json);
     if (libsf)
         libstreamfile_close(libsf);
-    if (lib)
-        libvgmstream_free(lib);
+    if (api_sf)
+        close_streamfile(api_sf);
+    if (vgmstream)
+        close_vgmstream(vgmstream);
     return err;
 }
 
