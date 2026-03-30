@@ -55,6 +55,44 @@ endif()
 install(TARGETS vgmstream_cli
 	RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
+add_executable(vgmstream_wasm_min_smoke
+	vgmstream_wasm_min_smoke.c)
+
+set_target_properties(vgmstream_wasm_min_smoke PROPERTIES
+	PREFIX ""
+	OUTPUT_NAME "vgmstream_wasm_min_smoke")
+
+target_link_libraries(vgmstream_wasm_min_smoke PUBLIC
+	vgmstream_wasm_min_core)
+
+target_compile_definitions(vgmstream_wasm_min_smoke PRIVATE VGM_WASM_MIN)
+
+setup_target(vgmstream_wasm_min_smoke TRUE)
+
+install(TARGETS vgmstream_wasm_min_smoke
+	RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+
+if(EMSCRIPTEN AND BUILD_WASM_MIN)
+	add_executable(vgmstream_wasm_min
+		vgmstream_wasm_min_exports.c)
+
+	set_target_properties(vgmstream_wasm_min PROPERTIES
+		PREFIX ""
+		OUTPUT_NAME "vgmstream_wasm_min"
+		LINK_FLAGS_RELEASE "-O3 -s EXPORTED_FUNCTIONS=['_malloc','_free','_vgmstream_web_convert','_vgmstream_web_free_result'] -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString']"
+		LINK_FLAGS "-s EXPORTED_FUNCTIONS=['_malloc','_free','_vgmstream_web_convert','_vgmstream_web_free_result'] -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString']")
+
+	target_link_libraries(vgmstream_wasm_min PUBLIC
+		vgmstream_wasm_min_core)
+
+	target_compile_definitions(vgmstream_wasm_min PRIVATE VGM_WASM_MIN)
+
+	setup_target(vgmstream_wasm_min TRUE)
+
+	install(TARGETS vgmstream_wasm_min
+		RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+endif()
+
 # TODO: Make it so vgmstream123 can build with Windows (this probably needs a libao.dll included with vgmstream, though)
 
 if(NOT WIN32 AND BUILD_V123)

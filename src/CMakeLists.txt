@@ -1,5 +1,7 @@
 file(GLOB BASE_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/base/*.h")
 file(GLOB BASE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/base/*.c")
+list(REMOVE_ITEM BASE_SOURCES
+	${CMAKE_CURRENT_SOURCE_DIR}/base/codec_info_wasm_min.c)
 file(GLOB CODING_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/coding/*.h")
 file(GLOB CODING_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/coding/*.c")
 file(GLOB CLIBS_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/coding/libs/*.h")
@@ -14,6 +16,11 @@ set(EXT_HEADERS
 	${VGM_SOURCE_DIR}/ext_includes/pstdint.h)
 file(GLOB MAIN_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
 file(GLOB MAIN_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
+
+set(WASM_MIN_PRIVATE_SOURCES
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_wasm_min.c
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_init_wasm_min.c)
+list(REMOVE_ITEM MAIN_SOURCES ${WASM_MIN_PRIVATE_SOURCES})
 
 # Setup source groups, mainly for Visual Studio
 source_group("Header Files\\base" FILES ${BASE_HEADERS})
@@ -71,6 +78,48 @@ endif()
 setup_target(libvgmstream)
 
 target_include_directories(libvgmstream PRIVATE ${libvgmstream_includes})
+
+set(libvgmstream_wasm_min_main_sources
+	${MAIN_SOURCES}
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_init_wasm_min.c)
+list(REMOVE_ITEM libvgmstream_wasm_min_main_sources
+	${CMAKE_CURRENT_SOURCE_DIR}/vgmstream_init.c)
+
+set(libvgmstream_wasm_min_meta_sources
+	${CMAKE_CURRENT_SOURCE_DIR}/meta/wwise.c)
+
+set(libvgmstream_wasm_min_sources
+	${BASE_SOURCES}
+	${CODING_SOURCES}
+	${CLIBS_SOURCES}
+	${LAYOUT_SOURCES}
+	${libvgmstream_wasm_min_meta_sources}
+	${UTIL_SOURCES}
+	${libvgmstream_wasm_min_main_sources}
+	${EXT_HEADERS}
+)
+
+add_library(libvgmstream_wasm_min STATIC ${libvgmstream_wasm_min_sources} ${libvgmstream_headers})
+set_target_properties(libvgmstream_wasm_min PROPERTIES PREFIX "")
+target_compile_definitions(libvgmstream_wasm_min PRIVATE VGM_WASM_MIN)
+
+if(USE_FFMPEG AND FFMPEG_COMPILE)
+	add_dependencies(libvgmstream_wasm_min avcodec)
+endif()
+
+setup_target(libvgmstream_wasm_min)
+target_include_directories(libvgmstream_wasm_min PRIVATE ${libvgmstream_includes})
+
+add_library(vgmstream_wasm_min_core STATIC
+	vgmstream_wasm_min.c
+	${VGM_SOURCE_DIR}/cli/wav_utils.c
+	vgmstream_wasm_min.h)
+set_target_properties(vgmstream_wasm_min_core PROPERTIES PREFIX "")
+target_compile_definitions(vgmstream_wasm_min_core PRIVATE VGM_WASM_MIN)
+target_link_libraries(vgmstream_wasm_min_core PUBLIC libvgmstream_wasm_min)
+target_include_directories(vgmstream_wasm_min_core PRIVATE ${libvgmstream_includes})
+target_include_directories(vgmstream_wasm_min_core PRIVATE ${VGM_SOURCE_DIR}/cli)
+setup_target(vgmstream_wasm_min_core)
 
 # libvgmstream.so
 if(BUILD_SHARED_LIBS)

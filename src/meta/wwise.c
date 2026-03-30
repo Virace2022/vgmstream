@@ -114,6 +114,11 @@ VGMSTREAM* init_vgmstream_wwise_bnk(STREAMFILE* sf, int* p_prefetch) {
     vgmstream->channel_layout = ww.channel_layout;
     vgmstream->stream_size = ww.data_size;
 
+#ifdef VGM_WASM_MIN
+    if (ww.codec != VORBIS)
+        goto fail;
+#endif
+
     switch(ww.codec) {
         case PCM: /* common */
             /* normally riff.c has priority but it's needed when .wem is used */
