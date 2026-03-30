@@ -44,7 +44,6 @@ jobs:
         shell: bash
         run: |
           which emcmake
-          emcmake --version
           which emcc
           emcc --version
 
