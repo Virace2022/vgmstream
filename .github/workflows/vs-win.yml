@@ -3,21 +3,6 @@
 name: Windows build
 
 on:
-  push:
-    branches: [ master ]
-    paths-ignore:
-      - 'doc/**'
-      - '**.md'
-      - 'COPYING'
-      - '.gitignore'
-      - 'cli/tools/**'
-  pull_request:
-    paths-ignore:
-      - 'doc/**'
-      - '**.md'
-      - 'COPYING'
-      - '.gitignore'
-      - 'cli/tools/**'
   workflow_dispatch:
 
 concurrency:

@@ -1,6 +1,14 @@
-name: wasm-min manual build
+name: wasm-min build
 
 on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - 'doc/**'
+      - '**.md'
+      - 'COPYING'
+      - '.gitignore'
+      - 'cli/tools/**'
   workflow_dispatch:
 
 concurrency:
