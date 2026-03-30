@@ -114,6 +114,7 @@ list(REMOVE_ITEM libvgmstream_wasm_min_base_sources
 	${CMAKE_CURRENT_SOURCE_DIR}/base/render.c
 	${CMAKE_CURRENT_SOURCE_DIR}/base/resampler.c
 	${CMAKE_CURRENT_SOURCE_DIR}/base/seek.c
+	${CMAKE_CURRENT_SOURCE_DIR}/base/streamfile_api.c
 	${CMAKE_CURRENT_SOURCE_DIR}/base/tags.c
 	${CMAKE_CURRENT_SOURCE_DIR}/base/streamfile_stdio.c)
 

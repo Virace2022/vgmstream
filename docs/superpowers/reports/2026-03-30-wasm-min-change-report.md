@@ -45,6 +45,14 @@ Main contents:
 - switched Wwise init/open/close to wasm-min-specific runtime branches under `VGM_WASM_MIN`
 - continued reducing generic runtime dependencies while keeping the LoL `.wem` positive path alive
 
+### `cfc73ad9`
+`chore(wasm-min): 补充改动报告与手动构建工作流`
+
+Main contents:
+
+- added a consolidated change report for the wasm-min workstream
+- added a `workflow_dispatch` workflow for manually building and publishing wasm-min artifacts
+
 ## Size History
 
 The most relevant checkpoints were:
@@ -54,14 +62,15 @@ The most relevant checkpoints were:
 | First working wasm-min build | 66,937 | 1,688,285 | 565,644 |
 | After size-oriented link tuning | 30,240 | 1,676,548 | 563,917 |
 | After brutal runtime/path reduction | 29,949 | 1,046,690 | 344,903 |
+| After direct STREAMFILE path cleanup | 29,949 | 1,045,367 | 344,618 |
 
 ### High-level delta
 
 From the first working `wasm-min` build to the current result:
 
 - JS reduced by `36,988` bytes
-- WASM reduced by `641,595` bytes
-- gzip-compressed WASM reduced by `220,741` bytes
+- WASM reduced by `642,918` bytes
+- gzip-compressed WASM reduced by `221,026` bytes
 
 ### Practical meaning
 
@@ -126,6 +135,12 @@ The WSL wasm build path is now encapsulated in a dedicated script instead of req
 Key file:
 
 - [make-build-wasm-min.sh](/mnt/h/Programming/C++/vgmstream-lite/make-build-wasm-min.sh)
+
+### 7. Direct STREAMFILE bridge removal in hot path
+
+The latest reduction step removed the `libstreamfile -> STREAMFILE` bridge from the wasm-min compatibility-layer hot path and replaced it with a minimal in-memory `STREAMFILE` implementation.
+
+This did not radically change size on its own, but it simplified the path and removed more generic runtime glue.
 
 ## Validation Performed
 

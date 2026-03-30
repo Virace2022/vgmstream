@@ -69,5 +69,10 @@ if (-not (Test-Path $WasmBin)) {
     throw "Expected wasm binary artifact was not created: $WasmBin"
 }
 
+$WasmSize = (Get-Item $WasmBin).Length
+if ($WasmSize -ge 1050000) {
+    throw "Expected wasm-min artifact to stay below 1050000 bytes, got $WasmSize"
+}
+
 Write-Host "PASS: found wasm-min smoke executable at $Exe"
 Write-Host "PASS: found wasm-min wasm artifacts at $WasmJs and $WasmBin"

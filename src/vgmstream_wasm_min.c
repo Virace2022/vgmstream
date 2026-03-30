@@ -4,8 +4,6 @@
 #include "../cli/vjson.h"
 #include "../version.h"
 #include "vgmstream.h"
-#include "vgmstream_init.h"
-#include "base/api_internal.h"
 #include "base/codec_info.h"
 #include "base/decode_state.h"
 #include "base/sbuf.h"
@@ -21,12 +19,14 @@
 #endif
 
 extern const codec_info_t vorbis_custom_decoder;
+VGMSTREAM* init_vgmstream_wwise(STREAMFILE* sf);
 
 typedef struct {
+    STREAMFILE vt;
     const uint8_t* data;
     size_t size;
     char* name;
-} wasm_min_streamfile_priv_t;
+} wasm_min_streamfile_t;
 
 static char* wasm_min_strdup(const char* str) {
     size_t len = strlen(str) + 1;
@@ -50,48 +50,47 @@ static int wasm_min_set_error(vgmstream_web_result_t* result, int error_code, co
     return error_code;
 }
 
-static int wasm_min_streamfile_read(void* user_data, uint8_t* dst, int64_t offset, int length) {
-    wasm_min_streamfile_priv_t* priv = user_data;
-    if (!priv || !dst || !priv->data || length <= 0 || offset < 0)
+static size_t wasm_min_streamfile_read(STREAMFILE* sf, uint8_t* dst, offv_t offset, size_t length) {
+    wasm_min_streamfile_t* priv = (wasm_min_streamfile_t*)sf;
+    if (!priv || !dst || !priv->data || length == 0 || offset < 0)
         return 0;
     if ((size_t)offset >= priv->size)
         return 0;
 
     size_t bytes_left = priv->size - (size_t)offset;
-    size_t bytes_to_copy = (size_t)length;
+    size_t bytes_to_copy = length;
     if (bytes_to_copy > bytes_left)
         bytes_to_copy = bytes_left;
 
     memcpy(dst, priv->data + offset, bytes_to_copy);
-    return (int)bytes_to_copy;
+    return bytes_to_copy;
 }
 
-static int64_t wasm_min_streamfile_get_size(void* user_data) {
-    wasm_min_streamfile_priv_t* priv = user_data;
-    return priv ? (int64_t)priv->size : 0;
+static size_t wasm_min_streamfile_get_size(STREAMFILE* sf) {
+    wasm_min_streamfile_t* priv = (wasm_min_streamfile_t*)sf;
+    return priv ? priv->size : 0;
 }
 
-static const char* wasm_min_streamfile_get_name(void* user_data) {
-    wasm_min_streamfile_priv_t* priv = user_data;
-    return priv ? priv->name : NULL;
+static offv_t wasm_min_streamfile_get_offset(STREAMFILE* sf) {
+    (void)sf;
+    return 0;
 }
 
-static void wasm_min_streamfile_close(libstreamfile_t* libsf) {
-    if (!libsf)
+static void wasm_min_streamfile_get_name(STREAMFILE* sf, char* name, size_t name_size) {
+    wasm_min_streamfile_t* priv = (wasm_min_streamfile_t*)sf;
+    if (!name || name_size == 0)
         return;
-
-    wasm_min_streamfile_priv_t* priv = libsf->user_data;
-    if (priv) {
-        free(priv->name);
-        free(priv);
-    }
-    free(libsf);
+    name[0] = '\0';
+    if (!priv || !priv->name)
+        return;
+    snprintf(name, name_size, "%s", priv->name);
+    name[name_size - 1] = '\0';
 }
 
-static libstreamfile_t* wasm_min_streamfile_open_internal(const uint8_t* data, size_t size, const char* name);
-
-static libstreamfile_t* wasm_min_streamfile_open(void* user_data, const char* filename) {
-    wasm_min_streamfile_priv_t* priv = user_data;
+static STREAMFILE* wasm_min_streamfile_open_internal(const uint8_t* data, size_t size, const char* name);
+static STREAMFILE* wasm_min_streamfile_open(STREAMFILE* sf, const char* filename, size_t buf_size) {
+    wasm_min_streamfile_t* priv = (wasm_min_streamfile_t*)sf;
+    (void)buf_size;
     if (!priv || !filename || !priv->name)
         return NULL;
     if (strcmp(filename, priv->name) != 0)
@@ -99,15 +98,16 @@ static libstreamfile_t* wasm_min_streamfile_open(void* user_data, const char* fi
     return wasm_min_streamfile_open_internal(priv->data, priv->size, priv->name);
 }
 
-static libstreamfile_t* wasm_min_streamfile_open_internal(const uint8_t* data, size_t size, const char* name) {
-    wasm_min_streamfile_priv_t* priv = NULL;
-    libstreamfile_t* libsf = NULL;
+static void wasm_min_streamfile_close(STREAMFILE* sf) {
+    wasm_min_streamfile_t* priv = (wasm_min_streamfile_t*)sf;
+    if (!priv)
+        return;
+    free(priv->name);
+    free(priv);
+}
 
-    libsf = calloc(1, sizeof(*libsf));
-    if (!libsf)
-        goto fail;
-
-    priv = calloc(1, sizeof(*priv));
+static STREAMFILE* wasm_min_streamfile_open_internal(const uint8_t* data, size_t size, const char* name) {
+    wasm_min_streamfile_t* priv = calloc(1, sizeof(*priv));
     if (!priv)
         goto fail;
 
@@ -117,17 +117,17 @@ static libstreamfile_t* wasm_min_streamfile_open_internal(const uint8_t* data, s
     if (!priv->name)
         goto fail;
 
-    libsf->user_data = priv;
-    libsf->read = wasm_min_streamfile_read;
-    libsf->get_size = wasm_min_streamfile_get_size;
-    libsf->get_name = wasm_min_streamfile_get_name;
-    libsf->open = wasm_min_streamfile_open;
-    libsf->close = wasm_min_streamfile_close;
+    priv->vt.read = wasm_min_streamfile_read;
+    priv->vt.get_size = wasm_min_streamfile_get_size;
+    priv->vt.get_offset = wasm_min_streamfile_get_offset;
+    priv->vt.get_name = wasm_min_streamfile_get_name;
+    priv->vt.open = wasm_min_streamfile_open;
+    priv->vt.close = wasm_min_streamfile_close;
 
-    return libsf;
+    return &priv->vt;
 fail:
-    if (libsf)
-        wasm_min_streamfile_close(libsf);
+    if (priv)
+        wasm_min_streamfile_close(&priv->vt);
     return NULL;
 }
 
@@ -259,8 +259,7 @@ int vgmstream_web_convert(
     if (options && options->output_format && options->output_format != VGMSTREAM_WEB_OUTPUT_WAV)
         return wasm_min_set_error(result, -2, "only WAV output is supported");
 
-    libstreamfile_t* libsf = NULL;
-    STREAMFILE* api_sf = NULL;
+    STREAMFILE* sf = NULL;
     VGMSTREAM* vgmstream = NULL;
     uint8_t* pcm_data = NULL;
     uint8_t* wav_data = NULL;
@@ -269,23 +268,17 @@ int vgmstream_web_convert(
     int32_t total_samples = 0;
     int err = -1;
 
-    libsf = wasm_min_streamfile_open_internal(input_data, input_size, input_name);
-    if (!libsf)
-        return wasm_min_set_error(result, -3, "failed to create in-memory streamfile");
-
-    api_sf = open_api_streamfile(libsf);
-    if (!api_sf) {
-        err = wasm_min_set_error(result, -4, "failed to create API streamfile");
+    sf = wasm_min_streamfile_open_internal(input_data, input_size, input_name);
+    if (!sf) {
+        err = wasm_min_set_error(result, -3, "failed to create in-memory streamfile");
         goto fail;
     }
 
-    vgmstream = init_vgmstream_wwise(api_sf);
-    close_streamfile(api_sf);
-    api_sf = NULL;
-    libstreamfile_close(libsf);
-    libsf = NULL;
+    vgmstream = init_vgmstream_wwise(sf);
+    close_streamfile(sf);
+    sf = NULL;
     if (!vgmstream) {
-        err = wasm_min_set_error(result, -5, "input is not a supported Wwise stream");
+        err = wasm_min_set_error(result, -4, "input is not a supported Wwise stream");
         goto fail;
     }
 
@@ -295,7 +288,7 @@ int vgmstream_web_convert(
 
     err = wasm_min_decode_wwise_vorbis(vgmstream, &pcm_data, &pcm_size, &total_samples);
     if (err < 0) {
-        err = wasm_min_set_error(result, -6, "failed to decode Wwise Vorbis stream");
+        err = wasm_min_set_error(result, -5, "failed to decode Wwise Vorbis stream");
         goto fail;
     }
 
@@ -309,13 +302,13 @@ int vgmstream_web_convert(
     uint8_t wav_header[0x100];
     size_t wav_header_size = wav_make_header(wav_header, sizeof(wav_header), &wav);
     if (wav_header_size == 0) {
-        err = wasm_min_set_error(result, -7, "failed to build WAV header");
+        err = wasm_min_set_error(result, -6, "failed to build WAV header");
         goto fail;
     }
 
     wav_data = malloc(wav_header_size + pcm_size);
     if (!wav_data) {
-        err = wasm_min_set_error(result, -8, "failed to allocate WAV output");
+        err = wasm_min_set_error(result, -7, "failed to allocate WAV output");
         goto fail;
     }
 
@@ -325,7 +318,7 @@ int vgmstream_web_convert(
     if (!options || options->want_info_json) {
         info_json = wasm_min_build_info_json(vgmstream);
         if (!info_json) {
-            err = wasm_min_set_error(result, -9, "failed to build info json");
+            err = wasm_min_set_error(result, -8, "failed to build info json");
             goto fail;
         }
     }
@@ -344,10 +337,8 @@ fail:
     free(pcm_data);
     free(wav_data);
     free(info_json);
-    if (libsf)
-        libstreamfile_close(libsf);
-    if (api_sf)
-        close_streamfile(api_sf);
+    if (sf)
+        close_streamfile(sf);
     if (vgmstream)
         close_vgmstream_wasm_min(vgmstream);
     return err;
