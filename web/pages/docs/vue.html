@@ -1,24 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>vgmstream wasm-min Vue guide</title>
+  <title>vgmstream wasm-min Vue 指南</title>
+  <link rel="stylesheet" href="../assets/app.css">
 </head>
-<body>
-  <main>
-    <h1>Vue Integration</h1>
-    <p>In Vue, keep the wasm runtime in a singleton composable or behind <code>provide/inject</code>. Load once near app startup and reuse that same runtime across pages, lists, and player widgets.</p>
+<body data-page-type="docs">
+  <main class="docs-shell">
+    <header class="docs-header">
+      <a class="docs-back" href="../index.html">返回演示 / Back to demo</a>
+      <div class="docs-header__actions">
+        <a class="docs-repo" href="https://github.com/Virace2022/vgmstream" target="_blank" rel="noreferrer">GitHub 仓库 / GitHub Repository</a>
+        <div class="locale-switcher" data-role="locale-switcher" aria-label="语言切换 / Language switcher">
+          <button class="locale-switcher__button" type="button" data-locale="zh-CN" aria-pressed="true">中文</button>
+          <button class="locale-switcher__button" type="button" data-locale="en" aria-pressed="false">English</button>
+        </div>
+      </div>
+    </header>
 
-    <h2>Recommended structure</h2>
-    <ul>
-      <li>Create one app-level runtime module.</li>
-      <li>Expose it through <code>provide/inject</code> or a single composable.</li>
-      <li>Let view components call decode helpers without owning runtime creation.</li>
-    </ul>
+    <article class="docs-panel" data-locale-panel="zh-CN">
+      <h1>Vue 集成</h1>
+      <p>在 Vue 里，建议把 wasm runtime 放进单例 composable，或者封装在 <code>provide/inject</code> 背后。应用启动附近加载一次，后续在页面、列表和播放器组件之间复用同一份 runtime。</p>
 
-    <h2>Composable sketch</h2>
-    <pre><code>const runtime = createVgmstreamRuntimeManager({
+      <h2>推荐结构</h2>
+      <ul>
+        <li>创建一个应用级 runtime 模块。</li>
+        <li>通过 <code>provide/inject</code> 或单一 composable 暴露它。</li>
+        <li>视图组件只负责调用解码能力，不负责 runtime 创建。</li>
+      </ul>
+
+      <h2>Composable 草图</h2>
+      <pre><code>const runtime = createVgmstreamRuntimeManager({
   loadModule: createBrowserModuleLoader({
     scriptUrl: '/assets/vgmstream_wasm_min.js',
     wasmUrl: '/assets/vgmstream_wasm_min.wasm',
@@ -29,18 +42,68 @@ export function useVgmstreamRuntime() {
   return runtime;
 }</code></pre>
 
-    <h2>Why singleton matters</h2>
-    <p>A singleton runtime avoids duplicate fetches, duplicate initialization work, and misleading performance data. It also makes it easier to reason about cold-path versus warm-path playback behavior.</p>
+      <h2>为什么单例更重要</h2>
+      <p>单例 runtime 可以避免重复下载、重复初始化以及被误解的性能数据。它还能让你更清楚地区分冷路径和热路径的播放表现，并把资源管理集中到一处。</p>
 
-    <h2>Avoid these anti-patterns</h2>
-    <ul>
-      <li>Do not create a new runtime inside every component instance.</li>
-      <li>Do not fetch the wasm script every time the user clicks play.</li>
-      <li>Do not hide the runtime in short-lived row components or modal dialogs.</li>
-      <li>Do not forget to revoke old blob URLs when the current decoded file changes.</li>
-    </ul>
+      <h2>常见反模式</h2>
+      <ul>
+        <li>不要在每个组件实例里都创建一份 runtime。</li>
+        <li>不要在每次点击播放时重新下载 wasm。</li>
+        <li>不要把 runtime 藏在寿命很短的行组件或弹窗组件里。</li>
+        <li>切换当前文件时，不要忘记回收旧 blob URL。</li>
+      </ul>
+    </article>
 
-    <p><a href="../index.html">Back to demo</a></p>
+    <article class="docs-panel" data-locale-panel="en" hidden>
+      <h1>Vue Integration</h1>
+      <p>In Vue, keep the wasm runtime in a singleton composable or behind <code>provide/inject</code>. Load once near app startup and reuse that same runtime across pages, lists, and player widgets.</p>
+
+      <h2>Recommended structure</h2>
+      <ul>
+        <li>Create one app-level runtime module.</li>
+        <li>Expose it through <code>provide/inject</code> or a single composable.</li>
+        <li>Let view components call decode helpers without owning runtime creation.</li>
+      </ul>
+
+      <h2>Composable sketch</h2>
+      <pre><code>const runtime = createVgmstreamRuntimeManager({
+  loadModule: createBrowserModuleLoader({
+    scriptUrl: '/assets/vgmstream_wasm_min.js',
+    wasmUrl: '/assets/vgmstream_wasm_min.wasm',
+  }),
+});
+
+export function useVgmstreamRuntime() {
+  return runtime;
+}</code></pre>
+
+      <h2>Why singleton matters</h2>
+      <p>A singleton runtime avoids duplicate fetches, duplicate initialization work, and misleading performance data. It also makes it easier to reason about cold-path versus warm-path playback behavior.</p>
+
+      <h2>Avoid these anti-patterns</h2>
+      <ul>
+        <li>Do not create a new runtime inside every component instance.</li>
+        <li>Do not fetch the wasm script every time the user clicks play.</li>
+        <li>Do not hide the runtime in short-lived row components or modal dialogs.</li>
+        <li>Do not forget to revoke old blob URLs when the current decoded file changes.</li>
+      </ul>
+    </article>
   </main>
+
+  <script type="module">
+    import { createLocaleController, syncLocalePanels } from '../assets/i18n.mjs';
+
+    const titles = {
+      'zh-CN': 'vgmstream wasm-min Vue 指南',
+      en: 'vgmstream wasm-min Vue guide',
+    };
+
+    createLocaleController({
+      onChange(locale) {
+        document.title = titles[locale] ?? titles['zh-CN'];
+        syncLocalePanels(locale);
+      },
+    });
+  </script>
 </body>
 </html>

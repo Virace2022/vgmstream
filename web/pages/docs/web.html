@@ -1,26 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>vgmstream wasm-min plain web guide</title>
+  <title>vgmstream wasm-min 原生 Web 指南</title>
+  <link rel="stylesheet" href="../assets/app.css">
 </head>
-<body>
-  <main>
-    <h1>Plain Web Integration</h1>
-    <p>Use a single runtime manager for the whole page. Load once, reuse often, and keep the large wasm module out of per-click handlers.</p>
+<body data-page-type="docs">
+  <main class="docs-shell">
+    <header class="docs-header">
+      <a class="docs-back" href="../index.html">返回演示 / Back to demo</a>
+      <div class="docs-header__actions">
+        <a class="docs-repo" href="https://github.com/Virace2022/vgmstream" target="_blank" rel="noreferrer">GitHub 仓库 / GitHub Repository</a>
+        <div class="locale-switcher" data-role="locale-switcher" aria-label="语言切换 / Language switcher">
+          <button class="locale-switcher__button" type="button" data-locale="zh-CN" aria-pressed="true">中文</button>
+          <button class="locale-switcher__button" type="button" data-locale="en" aria-pressed="false">English</button>
+        </div>
+      </div>
+    </header>
 
-    <h2>Recommended flow</h2>
-    <ol>
-      <li>Create one runtime manager when the page boots.</li>
-      <li>Warm it on the first meaningful user interaction or let the first decode call warm it automatically.</li>
-      <li>Pass a <code>File</code> object into <code>decodeFile(...)</code>.</li>
-      <li>Bind the returned <code>objectUrl</code> to an <code>audio</code> element.</li>
-      <li>Revoke old object URLs when switching tracks.</li>
-    </ol>
+    <article class="docs-panel" data-locale-panel="zh-CN">
+      <h1>原生 Web 集成</h1>
+      <p>推荐把 wasm runtime 当成整页共享的单例。页面启动时创建一次，之后在多次解码与播放之间复用，不要把大型 wasm 模块放进每次点击的回调里重复初始化。</p>
 
-    <h2>Minimal example</h2>
-    <pre><code>import {
+      <h2>推荐流程</h2>
+      <ol>
+        <li>页面启动时创建一个 runtime manager。</li>
+        <li>在第一次有效用户交互时预热，或者让第一次解码自动完成预热。</li>
+        <li>把浏览器的 <code>File</code> 对象直接传给 <code>decodeFile(...)</code>。</li>
+        <li>把返回的 <code>objectUrl</code> 绑定到 <code>audio</code> 元素。</li>
+        <li>切换曲目时回收旧的 blob URL。</li>
+      </ol>
+
+      <h2>最小示例</h2>
+      <pre><code>import {
   createBrowserModuleLoader,
   createVgmstreamRuntimeManager,
 } from '../assets/vgmstream-runtime.mjs';
@@ -43,18 +56,82 @@ async function playSelectedFile(file, audioElement) {
   await audioElement.play();
 }</code></pre>
 
-    <h2>Timing guidance</h2>
-    <p>Keep page-visible metrics concise: wasm fetch, wasm init, decode start, decode duration, playback start, and WAV output size. Put deeper diagnostics in DevTools console rather than in the page body.</p>
+      <h2>时间指标建议</h2>
+      <p>页面上建议只保留用户能感知的几个指标：wasm 下载、wasm 初始化、开始解码、解码耗时、开始播放，以及 WAV 输出大小。更深的诊断信息放到 DevTools console 更合适。</p>
 
-    <h2>Do not do this</h2>
-    <ul>
-      <li>Do not create a new runtime inside every click handler.</li>
-      <li>Do not fetch the wasm script again for every selected file.</li>
-      <li>Do not hide warmup cost inside a later playback metric.</li>
-      <li>Do not forget to revoke old blob URLs when replacing the current track.</li>
-    </ul>
+      <h2>不要这样做</h2>
+      <ul>
+        <li>不要在每个点击处理器里新建 runtime。</li>
+        <li>不要在每次选择文件时重新下载 wasm。</li>
+        <li>不要把预热开销偷偷算进后面的播放指标里。</li>
+        <li>不要在切换当前曲目后忘记回收旧 blob URL。</li>
+      </ul>
+    </article>
 
-    <p><a href="../index.html">Back to demo</a></p>
+    <article class="docs-panel" data-locale-panel="en" hidden>
+      <h1>Plain Web Integration</h1>
+      <p>Use a single runtime manager for the whole page. Load once, reuse often, and keep the large wasm module out of per-click handlers.</p>
+
+      <h2>Recommended flow</h2>
+      <ol>
+        <li>Create one runtime manager when the page boots.</li>
+        <li>Warm it on the first meaningful user interaction or let the first decode call warm it automatically.</li>
+        <li>Pass a <code>File</code> object into <code>decodeFile(...)</code>.</li>
+        <li>Bind the returned <code>objectUrl</code> to an <code>audio</code> element.</li>
+        <li>Revoke old object URLs when switching tracks.</li>
+      </ol>
+
+      <h2>Minimal example</h2>
+      <pre><code>import {
+  createBrowserModuleLoader,
+  createVgmstreamRuntimeManager,
+} from '../assets/vgmstream-runtime.mjs';
+
+const runtime = createVgmstreamRuntimeManager({
+  loadModule: createBrowserModuleLoader({
+    scriptUrl: '../assets/vgmstream_wasm_min.js',
+    wasmUrl: '../assets/vgmstream_wasm_min.wasm',
+  }),
+});
+
+async function playSelectedFile(file, audioElement) {
+  const decoded = await runtime.decodeFile(file, {
+    ignoreLoop: true,
+    wantInfoJson: true,
+    userActionAt: performance.now(),
+  });
+
+  audioElement.src = decoded.objectUrl;
+  await audioElement.play();
+}</code></pre>
+
+      <h2>Timing guidance</h2>
+      <p>Keep page-visible metrics concise: wasm fetch, wasm init, decode start, decode duration, playback start, and WAV output size. Put deeper diagnostics in DevTools console rather than in the page body.</p>
+
+      <h2>Do not do this</h2>
+      <ul>
+        <li>Do not create a new runtime inside every click handler.</li>
+        <li>Do not fetch the wasm script again for every selected file.</li>
+        <li>Do not hide warmup cost inside a later playback metric.</li>
+        <li>Do not forget to revoke old blob URLs when replacing the current track.</li>
+      </ul>
+    </article>
   </main>
+
+  <script type="module">
+    import { createLocaleController, syncLocalePanels } from '../assets/i18n.mjs';
+
+    const titles = {
+      'zh-CN': 'vgmstream wasm-min 原生 Web 指南',
+      en: 'vgmstream wasm-min plain web guide',
+    };
+
+    createLocaleController({
+      onChange(locale) {
+        document.title = titles[locale] ?? titles['zh-CN'];
+        syncLocalePanels(locale);
+      },
+    });
+  </script>
 </body>
 </html>

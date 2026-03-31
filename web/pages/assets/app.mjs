@@ -1,4 +1,5 @@
 import { createPlayerController } from './player-controller.mjs';
+import { applyTextTranslations, createLocaleController, getPreferredLocale } from './i18n.mjs';
 import { createBrowserModuleLoader, createVgmstreamRuntimeManager } from './vgmstream-runtime.mjs';
 
 const runtime = createVgmstreamRuntimeManager({
@@ -20,6 +21,89 @@ const metricKeys = [
   'fileSizeBytes',
   'wavSizeBytes',
 ];
+const uiTranslations = {
+  'zh-CN': {
+    __title: 'vgmstream wasm-min 演示站',
+    'toolbar.openFile': '添加文件',
+    'toolbar.openFolder': '添加文件夹',
+    'toolbar.reloadWasm': '重新加载 WASM',
+    'toolbar.downloadWav': '下载 WAV',
+    'track.heading': '文件列表',
+    'track.description': '添加文件夹只会更新本地播放列表。点击某个 <code>.wem</code> 条目即可立即解码并播放。',
+    'player.heading': '播放器',
+    'player.description': '点击左侧条目后，右侧面板会立即刷新，并开始解码与播放。',
+    'meta.file': '源文件',
+    'meta.wav': 'WAV 输出',
+    'meta.rate': '采样率',
+    'meta.channels': '声道数',
+    'meta.duration': '时长',
+    'metrics.heading': '调试指标',
+    'metrics.wasmFetch': 'WASM 下载',
+    'metrics.wasmInit': 'WASM 初始化',
+    'metrics.decodeStart': '开始解码',
+    'metrics.decodeDone': '解码完成',
+    'metrics.playbackStart': '开始播放',
+    'metrics.wavExport': 'WAV 导出',
+    'metrics.inputBytes': '输入大小',
+    'metrics.wavBytes': 'WAV 大小',
+    'docs.web': '原生 Web 指南',
+    'docs.react': 'React 指南',
+    'docs.vue': 'Vue 指南',
+    'docs.github': 'GitHub 仓库',
+    'status.label': '状态',
+    'status.idle': '空闲',
+    'status.ready': '就绪',
+    'status.decoding': '解码中',
+    'status.playing': '播放中',
+    'status.error': '错误',
+    'picker.hint.native': '当前环境支持 Chromium 文件选择器。文件始终保留在本地，只有点击播放列表条目时才会读取。',
+    'picker.hint.fallback': '当前环境不支持 File System Access API，已回退为隐藏文件输入框。',
+    'picker.typeDescription': 'Wwise 音频流',
+    'current.none': '未选择音频',
+    'track.empty': '添加 .wem 文件或文件夹后，这里会显示本地播放列表。',
+  },
+  en: {
+    __title: 'vgmstream wasm-min demo',
+    'toolbar.openFile': 'Add File',
+    'toolbar.openFolder': 'Add Folder',
+    'toolbar.reloadWasm': 'Reload WASM',
+    'toolbar.downloadWav': 'Download WAV',
+    'track.heading': 'Files',
+    'track.description': 'Adding a folder only updates the local playlist. Click a <code>.wem</code> entry to decode and play it.',
+    'player.heading': 'Player',
+    'player.description': 'Clicking a row updates the right panel and immediately starts decode and playback.',
+    'meta.file': 'File',
+    'meta.wav': 'WAV',
+    'meta.rate': 'Rate',
+    'meta.channels': 'Channels',
+    'meta.duration': 'Duration',
+    'metrics.heading': 'Debug Metrics',
+    'metrics.wasmFetch': 'wasm download',
+    'metrics.wasmInit': 'wasm init',
+    'metrics.decodeStart': 'decode start',
+    'metrics.decodeDone': 'decode done',
+    'metrics.playbackStart': 'playback start',
+    'metrics.wavExport': 'wav export',
+    'metrics.inputBytes': 'input bytes',
+    'metrics.wavBytes': 'wav bytes',
+    'docs.web': 'Plain Web Guide',
+    'docs.react': 'React Guide',
+    'docs.vue': 'Vue Guide',
+    'docs.github': 'GitHub Repository',
+    'status.label': 'Status',
+    'status.idle': 'idle',
+    'status.ready': 'ready',
+    'status.decoding': 'decoding',
+    'status.playing': 'playing',
+    'status.error': 'error',
+    'picker.hint.native': 'Chromium file pickers are used here. Files stay local and are only read when you click a playlist entry.',
+    'picker.hint.fallback': 'Browser file pickers are unavailable here, so hidden file inputs are used as a fallback.',
+    'picker.typeDescription': 'Wwise audio streams',
+    'current.none': 'No track selected',
+    'track.empty': 'Add a .wem file or folder to build a local playlist.',
+  },
+};
+let activeLocale = getPreferredLocale();
 
 function debugLog(label, payload) {
   console.groupCollapsed(`[wasm-demo] ${label}`);
@@ -58,6 +142,10 @@ function revokeDecodedResult(decodedResult) {
   if (decodedResult?.objectUrl) {
     URL.revokeObjectURL(decodedResult.objectUrl);
   }
+}
+
+function t(key) {
+  return uiTranslations[activeLocale]?.[key] ?? uiTranslations['zh-CN'][key] ?? key;
 }
 
 function supportsPickerApi() {
@@ -154,7 +242,7 @@ function renderTrackList(dom) {
   if (tracks.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'track-list__empty';
-    empty.textContent = 'Add a .wem file or folder to build a local playlist.';
+    empty.textContent = t('track.empty');
     dom.trackList.appendChild(empty);
     return;
   }
@@ -188,6 +276,12 @@ function renderPlaybackTime(dom) {
     `${formatSeconds(dom.audioPlayer.currentTime)} / ${formatSeconds(dom.audioPlayer.duration)}`;
 }
 
+function renderPickerHint(dom) {
+  dom.pickerHint.textContent = supportsPickerApi()
+    ? t('picker.hint.native')
+    : t('picker.hint.fallback');
+}
+
 function renderDetails(dom) {
   const state = controller.getState();
   const focusedTrack = controller.getFocusedTrack();
@@ -195,8 +289,8 @@ function renderDetails(dom) {
     ? state.decodedResult?.infoJson ?? null
     : null;
 
-  dom.runtimeStatus.textContent = `Status: ${state.runtimeStatus}`;
-  dom.currentTrackLabel.textContent = focusedTrack ? focusedTrack.label : 'No track selected';
+  dom.runtimeStatus.textContent = `${t('status.label')}: ${t(`status.${state.runtimeStatus}`)}`;
+  dom.currentTrackLabel.textContent = focusedTrack ? focusedTrack.label : t('current.none');
   dom.downloadButton.disabled = !state.downloadReady;
 
   dom.detailFileSize.textContent = focusedTrack ? formatBytes(focusedTrack.file.size) : '--';
@@ -221,6 +315,8 @@ function renderDetails(dom) {
 }
 
 function render(dom) {
+  applyTextTranslations(activeLocale, uiTranslations);
+  renderPickerHint(dom);
   renderTrackList(dom);
   renderDetails(dom);
   renderPlaybackTime(dom);
@@ -366,7 +462,7 @@ async function openFiles(dom) {
       const handles = await window.showOpenFilePicker({
         multiple: true,
         types: [{
-          description: 'Wwise audio streams',
+          description: t('picker.typeDescription'),
           accept: {
             'application/octet-stream': ['.wem'],
           },
@@ -408,9 +504,6 @@ async function openFolder(dom) {
 
 function installEventHandlers(dom) {
   dom.audioPlayer.volume = 0.2;
-  dom.pickerHint.textContent = supportsPickerApi()
-    ? 'Chromium file pickers are used here. Files stay local and are only read when you click a playlist entry.'
-    : 'Browser file pickers are unavailable here, so hidden file inputs are used as a fallback.';
 
   dom.openFileButton.addEventListener('click', () => {
     void openFiles(dom);
@@ -477,6 +570,12 @@ function installEventHandlers(dom) {
 
 function bootDemo() {
   const dom = collectDom();
+  createLocaleController({
+    onChange(locale) {
+      activeLocale = locale;
+      render(dom);
+    },
+  });
   resetRuntimeMetrics();
   render(dom);
   installEventHandlers(dom);

@@ -1,24 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>vgmstream wasm-min React guide</title>
+  <title>vgmstream wasm-min React 指南</title>
+  <link rel="stylesheet" href="../assets/app.css">
 </head>
-<body>
-  <main>
-    <h1>React Integration</h1>
-    <p>In React, the wasm runtime should live at app scope. The recommended shape is a provider or a stable module-level singleton that loads once and is shared by the rest of the tree.</p>
+<body data-page-type="docs">
+  <main class="docs-shell">
+    <header class="docs-header">
+      <a class="docs-back" href="../index.html">返回演示 / Back to demo</a>
+      <div class="docs-header__actions">
+        <a class="docs-repo" href="https://github.com/Virace2022/vgmstream" target="_blank" rel="noreferrer">GitHub 仓库 / GitHub Repository</a>
+        <div class="locale-switcher" data-role="locale-switcher" aria-label="语言切换 / Language switcher">
+          <button class="locale-switcher__button" type="button" data-locale="zh-CN" aria-pressed="true">中文</button>
+          <button class="locale-switcher__button" type="button" data-locale="en" aria-pressed="false">English</button>
+        </div>
+      </div>
+    </header>
 
-    <h2>Recommended structure</h2>
-    <ul>
-      <li>Create the runtime in a provider such as <code>VgmstreamRuntimeProvider</code>.</li>
-      <li>Expose decode helpers through context or a custom hook.</li>
-      <li>Keep playback UI components focused on rendering and user events.</li>
-    </ul>
+    <article class="docs-panel" data-locale-panel="zh-CN">
+      <h1>React 集成</h1>
+      <p>在 React 里，wasm runtime 最好放在应用级别，而不是组件级别。推荐形态是 provider，或者一个稳定的模块级单例，只加载一次并在整棵组件树之间共享。</p>
 
-    <h2>Provider sketch</h2>
-    <pre><code>const runtime = createVgmstreamRuntimeManager({
+      <h2>推荐结构</h2>
+      <ul>
+        <li>在类似 <code>VgmstreamRuntimeProvider</code> 的 provider 里创建 runtime。</li>
+        <li>通过 context 或自定义 hook 暴露解码能力。</li>
+        <li>让播放 UI 组件只关心渲染和用户交互，不负责 runtime 生命周期。</li>
+      </ul>
+
+      <h2>Provider 草图</h2>
+      <pre><code>const runtime = createVgmstreamRuntimeManager({
   loadModule: createBrowserModuleLoader({
     scriptUrl: '/assets/vgmstream_wasm_min.js',
     wasmUrl: '/assets/vgmstream_wasm_min.wasm',
@@ -35,21 +48,80 @@ export function VgmstreamRuntimeProvider({ children }) {
   );
 }</code></pre>
 
-    <h2>Why this matters</h2>
-    <p>The wasm bundle is large enough that per-component initialization is wasteful. A single runtime means one fetch path, one initialization path, and consistent cache-hit behavior across route changes and repeated playback actions.</p>
+      <h2>为什么这样更稳</h2>
+      <p>wasm 资源体积不小，若把初始化散落到组件内部，很容易反复触发重复下载、重复实例化和难以解释的性能波动。单一 runtime 能让冷启动和热路径的指标更清晰，也更容易做缓存命中分析。</p>
 
-    <h2>Avoid these anti-patterns</h2>
-    <ul>
-      <li>Do not create the runtime inside a component body.</li>
-      <li>Do not create the runtime inside a button click callback.</li>
-      <li>Do not refetch the wasm file every time the selected track changes.</li>
-      <li>Do not tie runtime lifetime to short-lived list item components.</li>
-    </ul>
+      <h2>常见反模式</h2>
+      <ul>
+        <li>不要在组件函数体里创建 runtime。</li>
+        <li>不要在按钮点击回调里创建 runtime。</li>
+        <li>不要在切歌时重新抓取 wasm 资源。</li>
+        <li>不要把 runtime 绑定到寿命很短的列表项组件上。</li>
+      </ul>
 
-    <h2>Cleanup</h2>
-    <p>When a track changes, revoke the old blob URL in effect cleanup or in the player controller that owns the current decoded result.</p>
+      <h2>清理建议</h2>
+      <p>切换曲目后，要在 effect cleanup 或拥有当前解码结果的控制器层统一回收旧 blob URL。</p>
+    </article>
 
-    <p><a href="../index.html">Back to demo</a></p>
+    <article class="docs-panel" data-locale-panel="en" hidden>
+      <h1>React Integration</h1>
+      <p>In React, the wasm runtime should live at app scope. The recommended shape is a provider or a stable module-level singleton that loads once and is shared by the rest of the tree.</p>
+
+      <h2>Recommended structure</h2>
+      <ul>
+        <li>Create the runtime in a provider such as <code>VgmstreamRuntimeProvider</code>.</li>
+        <li>Expose decode helpers through context or a custom hook.</li>
+        <li>Keep playback UI components focused on rendering and user events.</li>
+      </ul>
+
+      <h2>Provider sketch</h2>
+      <pre><code>const runtime = createVgmstreamRuntimeManager({
+  loadModule: createBrowserModuleLoader({
+    scriptUrl: '/assets/vgmstream_wasm_min.js',
+    wasmUrl: '/assets/vgmstream_wasm_min.wasm',
+  }),
+});
+
+const VgmstreamRuntimeContext = createContext(runtime);
+
+export function VgmstreamRuntimeProvider({ children }) {
+  return (
+    &lt;VgmstreamRuntimeContext.Provider value={runtime}&gt;
+      {children}
+    &lt;/VgmstreamRuntimeContext.Provider&gt;
+  );
+}</code></pre>
+
+      <h2>Why this matters</h2>
+      <p>The wasm bundle is large enough that per-component initialization is wasteful. A single runtime means one fetch path, one initialization path, and consistent cache-hit behavior across route changes and repeated playback actions.</p>
+
+      <h2>Avoid these anti-patterns</h2>
+      <ul>
+        <li>Do not create the runtime inside a component body.</li>
+        <li>Do not create the runtime inside a button click callback.</li>
+        <li>Do not refetch the wasm file every time the selected track changes.</li>
+        <li>Do not tie runtime lifetime to short-lived list item components.</li>
+      </ul>
+
+      <h2>Cleanup</h2>
+      <p>When a track changes, revoke the old blob URL in effect cleanup or in the player controller that owns the current decoded result.</p>
+    </article>
   </main>
+
+  <script type="module">
+    import { createLocaleController, syncLocalePanels } from '../assets/i18n.mjs';
+
+    const titles = {
+      'zh-CN': 'vgmstream wasm-min React 指南',
+      en: 'vgmstream wasm-min React guide',
+    };
+
+    createLocaleController({
+      onChange(locale) {
+        document.title = titles[locale] ?? titles['zh-CN'];
+        syncLocalePanels(locale);
+      },
+    });
+  </script>
 </body>
 </html>

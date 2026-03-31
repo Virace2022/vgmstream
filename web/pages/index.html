@@ -1,21 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>vgmstream wasm-min demo</title>
+  <title>vgmstream wasm-min 演示站</title>
   <link rel="stylesheet" href="./assets/app.css">
 </head>
 <body>
   <main class="app-shell">
     <header class="toolbar">
       <div class="toolbar__group">
-        <button type="button" data-role="open-file">Add File</button>
-        <button type="button" data-role="open-folder">Add Folder</button>
-        <button type="button" data-role="reload-wasm">Reload WASM</button>
-        <button type="button" data-role="download-wav" disabled>Download WAV</button>
+        <button type="button" data-role="open-file" data-locale-key="toolbar.openFile">添加文件</button>
+        <button type="button" data-role="open-folder" data-locale-key="toolbar.openFolder">添加文件夹</button>
+        <button type="button" data-role="reload-wasm" data-locale-key="toolbar.reloadWasm">重新加载 WASM</button>
+        <button type="button" data-role="download-wav" data-locale-key="toolbar.downloadWav" disabled>下载 WAV</button>
       </div>
-      <div class="toolbar__status" data-role="runtime-status">Status: idle</div>
+      <div class="toolbar__meta">
+        <div class="locale-switcher" data-role="locale-switcher" aria-label="语言切换 / Language switcher">
+          <button class="locale-switcher__button" type="button" data-locale="zh-CN" aria-pressed="true">中文</button>
+          <button class="locale-switcher__button" type="button" data-locale="en" aria-pressed="false">English</button>
+        </div>
+        <div class="toolbar__status" data-role="runtime-status">状态：空闲</div>
+      </div>
     </header>
 
     <p class="picker-hint" data-role="picker-hint"></p>
@@ -26,51 +32,52 @@
     <section class="workspace">
       <aside class="track-pane">
         <div class="pane-heading">
-          <h1>Files</h1>
-          <p>Adding a folder only updates the local playlist. Click a <code>.wem</code> entry to decode and play it.</p>
+          <h1 data-locale-key="track.heading">文件列表</h1>
+          <p data-locale-key="track.description" data-locale-html="true">添加文件夹只会更新本地播放列表。点击某个 <code>.wem</code> 条目即可立即解码并播放。</p>
         </div>
         <div class="track-list" data-role="track-list"></div>
       </aside>
 
       <section class="player-pane">
         <div class="pane-heading">
-          <h2>Player</h2>
-          <p>Clicking a row updates the right panel and immediately starts decode and playback.</p>
+          <h2 data-locale-key="player.heading">播放器</h2>
+          <p data-locale-key="player.description" data-locale-html="true">点击左侧条目后，右侧面板会立即刷新，并开始解码与播放。</p>
         </div>
 
         <div class="player-header">
-          <p class="player-pane__current" data-role="current-track-label">No track selected</p>
+          <p class="player-pane__current" data-role="current-track-label">未选择音频</p>
           <p class="player-pane__time" data-role="playback-time">00:00 / --:--</p>
         </div>
 
         <audio controls preload="none" data-role="audio-player"></audio>
 
-        <div class="player-meta" role="group" aria-label="File details">
-          <p><span class="meta-label">File</span><span data-role="detail-file-size">--</span></p>
-          <p><span class="meta-label">WAV</span><span data-role="detail-wav-size">--</span></p>
-          <p><span class="meta-label">Rate</span><span data-role="detail-sample-rate">--</span></p>
-          <p><span class="meta-label">Channels</span><span data-role="detail-channels">--</span></p>
-          <p><span class="meta-label">Duration</span><span data-role="detail-duration">--</span></p>
+        <div class="player-meta" role="group" aria-label="文件详情 / File details">
+          <p><span class="meta-label" data-locale-key="meta.file">源文件</span><span data-role="detail-file-size">--</span></p>
+          <p><span class="meta-label" data-locale-key="meta.wav">WAV 输出</span><span data-role="detail-wav-size">--</span></p>
+          <p><span class="meta-label" data-locale-key="meta.rate">采样率</span><span data-role="detail-sample-rate">--</span></p>
+          <p><span class="meta-label" data-locale-key="meta.channels">声道数</span><span data-role="detail-channels">--</span></p>
+          <p><span class="meta-label" data-locale-key="meta.duration">时长</span><span data-role="detail-duration">--</span></p>
         </div>
 
         <div class="metrics-panel">
-          <h3>Debug Metrics</h3>
+          <h3 data-locale-key="metrics.heading">调试指标</h3>
           <ul>
-            <li>wasm download: <span data-metric="wasmFetchMs">--</span></li>
-            <li>wasm init: <span data-metric="wasmInstantiateMs">--</span></li>
-            <li>decode start: <span data-metric="userActionToDecodeStartMs">--</span></li>
-            <li>decode done: <span data-metric="decodeMs">--</span></li>
-            <li>playback start: <span data-metric="userActionToPlaybackStartMs">--</span></li>
-            <li>wav export: <span data-metric="wavExportMs">--</span></li>
-            <li>input bytes: <span data-metric="fileSizeBytes">--</span></li>
-            <li>wav bytes: <span data-metric="wavSizeBytes">--</span></li>
+            <li><span data-locale-key="metrics.wasmFetch">WASM 下载</span>: <span data-metric="wasmFetchMs">--</span></li>
+            <li><span data-locale-key="metrics.wasmInit">WASM 初始化</span>: <span data-metric="wasmInstantiateMs">--</span></li>
+            <li><span data-locale-key="metrics.decodeStart">开始解码</span>: <span data-metric="userActionToDecodeStartMs">--</span></li>
+            <li><span data-locale-key="metrics.decodeDone">解码完成</span>: <span data-metric="decodeMs">--</span></li>
+            <li><span data-locale-key="metrics.playbackStart">开始播放</span>: <span data-metric="userActionToPlaybackStartMs">--</span></li>
+            <li><span data-locale-key="metrics.wavExport">WAV 导出</span>: <span data-metric="wavExportMs">--</span></li>
+            <li><span data-locale-key="metrics.inputBytes">输入大小</span>: <span data-metric="fileSizeBytes">--</span></li>
+            <li><span data-locale-key="metrics.wavBytes">WAV 大小</span>: <span data-metric="wavSizeBytes">--</span></li>
           </ul>
         </div>
 
         <nav class="doc-links">
-          <a href="./docs/web.html">Plain Web Guide</a>
-          <a href="./docs/react.html">React Guide</a>
-          <a href="./docs/vue.html">Vue Guide</a>
+          <a href="./docs/web.html" data-locale-key="docs.web">原生 Web 指南</a>
+          <a href="./docs/react.html" data-locale-key="docs.react">React 指南</a>
+          <a href="./docs/vue.html" data-locale-key="docs.vue">Vue 指南</a>
+          <a href="https://github.com/Virace2022/vgmstream" target="_blank" rel="noreferrer" data-locale-key="docs.github">GitHub 仓库</a>
         </nav>
       </section>
     </section>
