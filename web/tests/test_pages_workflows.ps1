@@ -32,8 +32,8 @@ if ($PagesText -match "(?m)^  workflow_run:") {
     throw "Expected pages-demo workflow to stop using workflow_run after switching to release/artifact download"
 }
 
-if ($WasmText -notmatch "(?m)^  push:") {
-    throw "Expected wasm-min workflow to keep push trigger"
+if ($WasmText -match "(?m)^  push:") {
+    throw "Expected wasm-min workflow to stop using push trigger"
 }
 if ($WasmText -notmatch "(?m)^  workflow_dispatch:") {
     throw "Expected wasm-min workflow to keep workflow_dispatch trigger"
