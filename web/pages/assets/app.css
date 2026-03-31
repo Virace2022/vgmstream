@@ -73,6 +73,8 @@ code {
   cursor: pointer;
   font: inherit;
   padding: 10px 16px;
+}
+
 .toolbar__group > button[disabled] {
   background: #96a2bc;
   cursor: not-allowed;
@@ -174,7 +176,9 @@ code {
   display: grid;
   gap: 18px;
   align-content: start;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .player-header {
@@ -304,6 +308,10 @@ body[data-page-type="docs"] {
   display: grid;
   gap: 16px;
   padding: 24px;
+}
+
+.docs-panel[hidden] {
+  display: none;
 }
 
 .docs-panel h1,

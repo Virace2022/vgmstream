@@ -45,6 +45,7 @@ foreach ($RelativePath in $ExpectedFiles) {
 }
 
 $IndexPage = Get-Content -LiteralPath (Join-Path $SiteDir "index.html") -Raw
+$CssText = Get-Content -LiteralPath (Join-Path $SiteDir "assets/app.css") -Raw
 $WebDoc = Get-Content -LiteralPath (Join-Path $SiteDir "docs/web.html") -Raw
 $ReactDoc = Get-Content -LiteralPath (Join-Path $SiteDir "docs/react.html") -Raw
 $VueDoc = Get-Content -LiteralPath (Join-Path $SiteDir "docs/vue.html") -Raw
@@ -57,6 +58,18 @@ if ($IndexPage -notmatch 'data-role="locale-switcher"') {
 }
 if ($IndexPage -notmatch [Regex]::Escape("https://github.com/Virace2022/vgmstream")) {
     throw "Expected index.html to link to the GitHub repository"
+}
+if ($CssText -notmatch [Regex]::Escape(".toolbar__group > button[disabled]")) {
+    throw "Expected app.css to style disabled toolbar buttons"
+}
+if ($CssText -notmatch "padding: 10px 16px;\s*}\s*\.toolbar__group > button\[disabled\] \{") {
+    throw "Expected app.css button block to close before disabled button styling"
+}
+if ($CssText -notmatch [Regex]::Escape(".docs-panel[hidden]")) {
+    throw "Expected app.css to hide inactive docs locale panels explicitly"
+}
+if ($CssText -notmatch "(?s)\.player-pane\s*\{.*?overflow-y:\s*auto;") {
+    throw "Expected app.css to make the player pane vertically scrollable"
 }
 if ($WebDoc -notmatch "原生 Web 集成" -or $WebDoc -notmatch "English") {
     throw "Expected web.html to provide Chinese-first bilingual content"
