@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vgmstream wasm-min plain web guide</title>
+</head>
+<body>
+  <main>
+    <h1>Plain Web Integration</h1>
+    <p>Use a single runtime manager for the whole page. Load once, reuse often, and keep the large wasm module out of per-click handlers.</p>
+
+    <h2>Recommended flow</h2>
+    <ol>
+      <li>Create one runtime manager when the page boots.</li>
+      <li>Warm it on the first meaningful user interaction or let the first decode call warm it automatically.</li>
+      <li>Pass a <code>File</code> object into <code>decodeFile(...)</code>.</li>
+      <li>Bind the returned <code>objectUrl</code> to an <code>audio</code> element.</li>
+      <li>Revoke old object URLs when switching tracks.</li>
+    </ol>
+
+    <h2>Minimal example</h2>
+    <pre><code>import {
+  createBrowserModuleLoader,
+  createVgmstreamRuntimeManager,
+} from '../assets/vgmstream-runtime.mjs';
+
+const runtime = createVgmstreamRuntimeManager({
+  loadModule: createBrowserModuleLoader({
+    scriptUrl: '../assets/vgmstream_wasm_min.js',
+    wasmUrl: '../assets/vgmstream_wasm_min.wasm',
+  }),
+});
+
+async function playSelectedFile(file, audioElement) {
+  const decoded = await runtime.decodeFile(file, {
+    ignoreLoop: true,
+    wantInfoJson: true,
+    userActionAt: performance.now(),
+  });
+
+  audioElement.src = decoded.objectUrl;
+  await audioElement.play();
+}</code></pre>
+
+    <h2>Timing guidance</h2>
+    <p>Keep page-visible metrics concise: wasm fetch, wasm init, decode start, decode duration, playback start, and WAV output size. Put deeper diagnostics in DevTools console rather than in the page body.</p>
+
+    <h2>Do not do this</h2>
+    <ul>
+      <li>Do not create a new runtime inside every click handler.</li>
+      <li>Do not fetch the wasm script again for every selected file.</li>
+      <li>Do not hide warmup cost inside a later playback metric.</li>
+      <li>Do not forget to revoke old blob URLs when replacing the current track.</li>
+    </ul>
+
+    <p><a href="../index.html">Back to demo</a></p>
+  </main>
+</body>
+</html>

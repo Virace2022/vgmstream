@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vgmstream wasm-min demo</title>
+  <link rel="stylesheet" href="./assets/app.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="toolbar">
+      <div class="toolbar__group">
+        <button type="button" data-role="open-file">Add File</button>
+        <button type="button" data-role="open-folder">Add Folder</button>
+        <button type="button" data-role="reload-wasm">Reload WASM</button>
+        <button type="button" data-role="download-wav" disabled>Download WAV</button>
+      </div>
+      <div class="toolbar__status" data-role="runtime-status">Status: idle</div>
+    </header>
+
+    <p class="picker-hint" data-role="picker-hint"></p>
+
+    <input type="file" accept=".wem" data-role="single-file-input" hidden>
+    <input type="file" accept=".wem" data-role="folder-input" webkitdirectory multiple hidden>
+
+    <section class="workspace">
+      <aside class="track-pane">
+        <div class="pane-heading">
+          <h1>Files</h1>
+          <p>Adding a folder only updates the local playlist. Click a <code>.wem</code> entry to decode and play it.</p>
+        </div>
+        <div class="track-list" data-role="track-list"></div>
+      </aside>
+
+      <section class="player-pane">
+        <div class="pane-heading">
+          <h2>Player</h2>
+          <p>Clicking a row updates the right panel and immediately starts decode and playback.</p>
+        </div>
+
+        <div class="player-header">
+          <p class="player-pane__current" data-role="current-track-label">No track selected</p>
+          <p class="player-pane__time" data-role="playback-time">00:00 / --:--</p>
+        </div>
+
+        <audio controls preload="none" data-role="audio-player"></audio>
+
+        <div class="player-meta" role="group" aria-label="File details">
+          <p><span class="meta-label">File</span><span data-role="detail-file-size">--</span></p>
+          <p><span class="meta-label">WAV</span><span data-role="detail-wav-size">--</span></p>
+          <p><span class="meta-label">Rate</span><span data-role="detail-sample-rate">--</span></p>
+          <p><span class="meta-label">Channels</span><span data-role="detail-channels">--</span></p>
+          <p><span class="meta-label">Duration</span><span data-role="detail-duration">--</span></p>
+        </div>
+
+        <div class="metrics-panel">
+          <h3>Debug Metrics</h3>
+          <ul>
+            <li>wasm download: <span data-metric="wasmFetchMs">--</span></li>
+            <li>wasm init: <span data-metric="wasmInstantiateMs">--</span></li>
+            <li>decode start: <span data-metric="userActionToDecodeStartMs">--</span></li>
+            <li>decode done: <span data-metric="decodeMs">--</span></li>
+            <li>playback start: <span data-metric="userActionToPlaybackStartMs">--</span></li>
+            <li>wav export: <span data-metric="wavExportMs">--</span></li>
+            <li>input bytes: <span data-metric="fileSizeBytes">--</span></li>
+            <li>wav bytes: <span data-metric="wavSizeBytes">--</span></li>
+          </ul>
+        </div>
+
+        <nav class="doc-links">
+          <a href="./docs/web.html">Plain Web Guide</a>
+          <a href="./docs/react.html">React Guide</a>
+          <a href="./docs/vue.html">Vue Guide</a>
+        </nav>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="./assets/app.mjs"></script>
+</body>
+</html>

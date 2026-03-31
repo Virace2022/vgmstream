@@ -20,6 +20,7 @@ permissions:
 
 env:
   EM_VERSION: 3.1.74
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   build:
@@ -27,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup emsdk
         uses: pyodide/setup-emsdk@v15
@@ -35,14 +36,14 @@ jobs:
           version: ${{ env.EM_VERSION }}
 
       - name: Cache ogg
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ github.workspace }}/dependencies/ogg
           key: wasm-min-ogg-${{ hashFiles('cmake/dependencies/ogg.cmake') }}
 
       - name: Cache vorbis
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ${{ github.workspace }}/dependencies/vorbis
@@ -87,7 +88,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload wasm-min artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vgmstream-wasm-min
           if-no-files-found: error

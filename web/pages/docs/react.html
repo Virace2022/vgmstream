@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vgmstream wasm-min React guide</title>
+</head>
+<body>
+  <main>
+    <h1>React Integration</h1>
+    <p>In React, the wasm runtime should live at app scope. The recommended shape is a provider or a stable module-level singleton that loads once and is shared by the rest of the tree.</p>
+
+    <h2>Recommended structure</h2>
+    <ul>
+      <li>Create the runtime in a provider such as <code>VgmstreamRuntimeProvider</code>.</li>
+      <li>Expose decode helpers through context or a custom hook.</li>
+      <li>Keep playback UI components focused on rendering and user events.</li>
+    </ul>
+
+    <h2>Provider sketch</h2>
+    <pre><code>const runtime = createVgmstreamRuntimeManager({
+  loadModule: createBrowserModuleLoader({
+    scriptUrl: '/assets/vgmstream_wasm_min.js',
+    wasmUrl: '/assets/vgmstream_wasm_min.wasm',
+  }),
+});
+
+const VgmstreamRuntimeContext = createContext(runtime);
+
+export function VgmstreamRuntimeProvider({ children }) {
+  return (
+    &lt;VgmstreamRuntimeContext.Provider value={runtime}&gt;
+      {children}
+    &lt;/VgmstreamRuntimeContext.Provider&gt;
+  );
+}</code></pre>
+
+    <h2>Why this matters</h2>
+    <p>The wasm bundle is large enough that per-component initialization is wasteful. A single runtime means one fetch path, one initialization path, and consistent cache-hit behavior across route changes and repeated playback actions.</p>
+
+    <h2>Avoid these anti-patterns</h2>
+    <ul>
+      <li>Do not create the runtime inside a component body.</li>
+      <li>Do not create the runtime inside a button click callback.</li>
+      <li>Do not refetch the wasm file every time the selected track changes.</li>
+      <li>Do not tie runtime lifetime to short-lived list item components.</li>
+    </ul>
+
+    <h2>Cleanup</h2>
+    <p>When a track changes, revoke the old blob URL in effect cleanup or in the player controller that owns the current decoded result.</p>
+
+    <p><a href="../index.html">Back to demo</a></p>
+  </main>
+</body>
+</html>

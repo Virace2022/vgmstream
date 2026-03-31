@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vgmstream wasm-min Vue guide</title>
+</head>
+<body>
+  <main>
+    <h1>Vue Integration</h1>
+    <p>In Vue, keep the wasm runtime in a singleton composable or behind <code>provide/inject</code>. Load once near app startup and reuse that same runtime across pages, lists, and player widgets.</p>
+
+    <h2>Recommended structure</h2>
+    <ul>
+      <li>Create one app-level runtime module.</li>
+      <li>Expose it through <code>provide/inject</code> or a single composable.</li>
+      <li>Let view components call decode helpers without owning runtime creation.</li>
+    </ul>
+
+    <h2>Composable sketch</h2>
+    <pre><code>const runtime = createVgmstreamRuntimeManager({
+  loadModule: createBrowserModuleLoader({
+    scriptUrl: '/assets/vgmstream_wasm_min.js',
+    wasmUrl: '/assets/vgmstream_wasm_min.wasm',
+  }),
+});
+
+export function useVgmstreamRuntime() {
+  return runtime;
+}</code></pre>
+
+    <h2>Why singleton matters</h2>
+    <p>A singleton runtime avoids duplicate fetches, duplicate initialization work, and misleading performance data. It also makes it easier to reason about cold-path versus warm-path playback behavior.</p>
+
+    <h2>Avoid these anti-patterns</h2>
+    <ul>
+      <li>Do not create a new runtime inside every component instance.</li>
+      <li>Do not fetch the wasm script every time the user clicks play.</li>
+      <li>Do not hide the runtime in short-lived row components or modal dialogs.</li>
+      <li>Do not forget to revoke old blob URLs when the current decoded file changes.</li>
+    </ul>
+
+    <p><a href="../index.html">Back to demo</a></p>
+  </main>
+</body>
+</html>

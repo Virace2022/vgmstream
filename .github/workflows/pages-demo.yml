@@ -1,0 +1,79 @@
+name: pages-demo
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [ "wasm-min build" ]
+    types:
+      - completed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  EM_VERSION: 3.1.74
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  deploy:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'master')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup emsdk
+        uses: pyodide/setup-emsdk@v15
+        with:
+          version: ${{ env.EM_VERSION }}
+
+      - name: Cache ogg
+        uses: actions/cache@v5
+        with:
+          path: |
+            ${{ github.workspace }}/dependencies/ogg
+          key: pages-demo-ogg-${{ hashFiles('cmake/dependencies/ogg.cmake') }}
+
+      - name: Cache vorbis
+        uses: actions/cache@v5
+        with:
+          path: |
+            ${{ github.workspace }}/dependencies/vorbis
+          key: pages-demo-vorbis-${{ hashFiles('cmake/dependencies/vorbis.cmake') }}
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Build Pages demo site
+        shell: bash
+        run: |
+          BUILD_DIR="$GITHUB_WORKSPACE/.temp/build-wasm-min-pages-gh" \
+          FETCHCONTENT_UPDATES_DISCONNECTED=OFF \
+          JOBS=3 \
+          sh ./make-build-pages-demo.sh
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ github.workspace }}/.temp/pages-demo-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

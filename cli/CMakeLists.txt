@@ -79,8 +79,8 @@ if(EMSCRIPTEN AND BUILD_WASM_MIN)
 	set_target_properties(vgmstream_wasm_min PROPERTIES
 		PREFIX ""
 		OUTPUT_NAME "vgmstream_wasm_min"
-		LINK_FLAGS_RELEASE "-Oz -flto -sFILESYSTEM=0 -sMALLOC=emmalloc -sASSERTIONS=0 -sSUPPORT_ERRNO=0 -sEXPORTED_FUNCTIONS=['_malloc','_free','_vgmstream_web_convert','_vgmstream_web_free_result'] -sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString'] -sINCOMING_MODULE_JS_API=[]"
-		LINK_FLAGS "-flto -sFILESYSTEM=0 -sMALLOC=emmalloc -sASSERTIONS=0 -sSUPPORT_ERRNO=0 -sEXPORTED_FUNCTIONS=['_malloc','_free','_vgmstream_web_convert','_vgmstream_web_free_result'] -sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString'] -sINCOMING_MODULE_JS_API=[]")
+		LINK_FLAGS_RELEASE "-Oz -flto -sFILESYSTEM=0 -sASSERTIONS=0 -sSUPPORT_ERRNO=0 -sSTACK_SIZE=524288 -sALLOW_MEMORY_GROWTH -sEXPORTED_FUNCTIONS=['_malloc','_free','_vgmstream_web_convert','_vgmstream_web_free_result'] -sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString'] -sINCOMING_MODULE_JS_API=[]"
+		LINK_FLAGS "-flto -sFILESYSTEM=0 -sASSERTIONS=0 -sSUPPORT_ERRNO=0 -sSTACK_SIZE=524288 -sALLOW_MEMORY_GROWTH -sEXPORTED_FUNCTIONS=['_malloc','_free','_vgmstream_web_convert','_vgmstream_web_free_result'] -sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString'] -sINCOMING_MODULE_JS_API=[]")
 
 	target_link_libraries(vgmstream_wasm_min PUBLIC
 		vgmstream_wasm_min_core)
