@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   EM_VERSION: 3.1.74
@@ -26,9 +26,20 @@ jobs:
   build:
     name: Build wasm-min
     runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release_meta.outputs.tag }}
+      short_sha: ${{ steps.release_meta.outputs.short_sha }}
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Resolve release metadata
+        id: release_meta
+        shell: bash
+        run: |
+          short_sha="${GITHUB_SHA::8}"
+          echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+          echo "tag=wasm-min-$short_sha" >> "$GITHUB_OUTPUT"
 
       - name: Setup emsdk
         uses: pyodide/setup-emsdk@v15
@@ -58,6 +69,8 @@ jobs:
 
       - name: Build wasm-min
         shell: bash
+        env:
+          VERSION: ${{ steps.release_meta.outputs.short_sha }}
         run: |
           BUILD_DIR="$GITHUB_WORKSPACE/.temp/build-wasm-min-gh" \
           FETCHCONTENT_UPDATES_DISCONNECTED=OFF \
@@ -96,3 +109,36 @@ jobs:
             ${{ github.workspace }}/.temp/build-wasm-min-gh/cli/vgmstream_wasm_min.js
             ${{ github.workspace }}/.temp/build-wasm-min-gh/cli/vgmstream_wasm_min.wasm
             ${{ github.workspace }}/.temp/build-wasm-min-gh/cli/vgmstream_wasm_min.wasm.gz
+
+      - name: Publish wasm-min release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release_meta.outputs.tag }}
+          SHORT_SHA: ${{ steps.release_meta.outputs.short_sha }}
+        run: |
+          release_title="wasm-min $SHORT_SHA"
+          notes_file="$(mktemp)"
+          {
+            echo "Automated wasm-min build for commit $GITHUB_SHA."
+            echo ""
+            echo "- Version: $SHORT_SHA"
+            echo "- Source commit: $GITHUB_SHA"
+          } > "$notes_file"
+
+          assets=(
+            "$GITHUB_WORKSPACE/.temp/build-wasm-min-gh/cli/vgmstream_wasm_min.js"
+            "$GITHUB_WORKSPACE/.temp/build-wasm-min-gh/cli/vgmstream_wasm_min.wasm"
+            "$GITHUB_WORKSPACE/.temp/build-wasm-min-gh/cli/vgmstream_wasm_min.wasm.gz"
+          )
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
+          else
+            gh release create "$RELEASE_TAG" "${assets[@]}" \
+              --target "$GITHUB_SHA" \
+              --title "$release_title" \
+              --notes-file "$notes_file" \
+              --latest=false \
+              --prerelease
+          fi

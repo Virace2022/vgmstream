@@ -1,11 +1,14 @@
 name: pages-demo
 
 on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'web/pages/**'
+      - 'make-build-pages-demo.sh'
+      - 'preview-pages-demo.sh'
+      - '.github/workflows/pages-demo.yml'
   workflow_dispatch:
-  workflow_run:
-    workflows: [ "wasm-min build" ]
-    types:
-      - completed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
@@ -17,17 +20,10 @@ permissions:
   id-token: write
 
 env:
-  EM_VERSION: 3.1.74
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  GH_REPO: ${{ github.repository }}
 
 jobs:
   deploy:
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_branch == 'master')
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -36,37 +32,40 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-
-      - name: Setup emsdk
-        uses: pyodide/setup-emsdk@v15
-        with:
-          version: ${{ env.EM_VERSION }}
-
-      - name: Cache ogg
-        uses: actions/cache@v5
-        with:
-          path: |
-            ${{ github.workspace }}/dependencies/ogg
-          key: pages-demo-ogg-${{ hashFiles('cmake/dependencies/ogg.cmake') }}
-
-      - name: Cache vorbis
-        uses: actions/cache@v5
-        with:
-          path: |
-            ${{ github.workspace }}/dependencies/vorbis
-          key: pages-demo-vorbis-${{ hashFiles('cmake/dependencies/vorbis.cmake') }}
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
 
+      - name: Resolve latest wasm-min release
+        id: release_meta
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh api "repos/$GH_REPO/releases?per_page=20" --jq '.[] | select(.draft == false and (.tag_name | startswith("wasm-min-"))) | .tag_name' | head -n1)
+          if [ -z "$tag" ]; then
+            echo "No wasm-min release found" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Download latest wasm-min release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/.temp/release-assets"
+          gh release download "${{ steps.release_meta.outputs.tag }}" \
+            --repo "$GH_REPO" \
+            --dir "$GITHUB_WORKSPACE/.temp/release-assets" \
+            --pattern "vgmstream_wasm_min.js" \
+            --pattern "vgmstream_wasm_min.wasm" \
+            --pattern "vgmstream_wasm_min.wasm.gz"
+
       - name: Build Pages demo site
         shell: bash
         run: |
-          BUILD_DIR="$GITHUB_WORKSPACE/.temp/build-wasm-min-pages-gh" \
-          FETCHCONTENT_UPDATES_DISCONNECTED=OFF \
-          JOBS=3 \
+          WASM_ASSET_DIR="$GITHUB_WORKSPACE/.temp/release-assets" \
           sh ./make-build-pages-demo.sh
 
       - name: Upload Pages artifact

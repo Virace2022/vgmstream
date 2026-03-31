@@ -5,6 +5,7 @@ REPO_ROOT=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 SITE_DIR="${SITE_DIR:-$REPO_ROOT/.temp/pages-demo-site}"
 BUILD_DIR="${BUILD_DIR:-$REPO_ROOT/.temp/build-wasm-min-pages}"
 FETCHCONTENT_BASE_DIR="${FETCHCONTENT_BASE_DIR:-$REPO_ROOT/.temp/fetchcontent-pages}"
+WASM_ASSET_DIR="${WASM_ASSET_DIR:-}"
 
 to_wsl_path() {
   windows_path=$1
@@ -15,13 +16,17 @@ to_wsl_path() {
 }
 
 build_wasm_min() {
+  if [ -n "$WASM_ASSET_DIR" ]; then
+    return
+  fi
+
   mkdir -p "$BUILD_DIR" "$FETCHCONTENT_BASE_DIR"
 
   if command -v emcmake >/dev/null 2>&1; then
     BUILD_DIR="$BUILD_DIR" \
     FETCHCONTENT_BASE_DIR="$FETCHCONTENT_BASE_DIR" \
     FETCHCONTENT_UPDATES_DISCONNECTED=ON \
-    sh "$REPO_ROOT/make-build-wasm-min.sh"
+    bash "$REPO_ROOT/make-build-wasm-min.sh"
     return
   fi
 
@@ -48,12 +53,24 @@ build_wasm_min() {
 }
 
 assemble_site() {
+  if [ -z "$WASM_ASSET_DIR" ]; then
+    WASM_ASSET_DIR="$BUILD_DIR/cli"
+  fi
+
+  if [ ! -f "$WASM_ASSET_DIR/vgmstream_wasm_min.js" ] || [ ! -f "$WASM_ASSET_DIR/vgmstream_wasm_min.wasm" ]; then
+    echo "Expected wasm assets were not found in $WASM_ASSET_DIR" >&2
+    exit 1
+  fi
+
   mkdir -p "$SITE_DIR/assets" "$SITE_DIR/docs"
   find "$SITE_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 
   cp -R "$REPO_ROOT/web/pages/." "$SITE_DIR/"
-  cp "$BUILD_DIR/cli/vgmstream_wasm_min.js" "$SITE_DIR/assets/"
-  cp "$BUILD_DIR/cli/vgmstream_wasm_min.wasm" "$SITE_DIR/assets/"
+  cp "$WASM_ASSET_DIR/vgmstream_wasm_min.js" "$SITE_DIR/assets/"
+  cp "$WASM_ASSET_DIR/vgmstream_wasm_min.wasm" "$SITE_DIR/assets/"
+  if [ -f "$WASM_ASSET_DIR/vgmstream_wasm_min.wasm.gz" ]; then
+    cp "$WASM_ASSET_DIR/vgmstream_wasm_min.wasm.gz" "$SITE_DIR/assets/"
+  fi
 }
 
 build_wasm_min
