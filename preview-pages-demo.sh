@@ -5,7 +5,7 @@ REPO_ROOT=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 SITE_DIR="${SITE_DIR:-$REPO_ROOT/.temp/pages-demo-site}"
 PORT="${PORT:-4173}"
 
-if [ ! -d "$SITE_DIR" ]; then
+if [ "${SKIP_BUILD:-0}" != "1" ]; then
   sh "$REPO_ROOT/make-build-pages-demo.sh"
 fi
 

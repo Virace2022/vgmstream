@@ -15,13 +15,6 @@ to_wsl_path() {
 }
 
 build_wasm_min() {
-  wasm_js="$BUILD_DIR/cli/vgmstream_wasm_min.js"
-  wasm_bin="$BUILD_DIR/cli/vgmstream_wasm_min.wasm"
-
-  if [ -f "$wasm_js" ] && [ -f "$wasm_bin" ]; then
-    return
-  fi
-
   mkdir -p "$BUILD_DIR" "$FETCHCONTENT_BASE_DIR"
 
   if command -v emcmake >/dev/null 2>&1; then
